@@ -1,0 +1,97 @@
+/* 보드 허브. 무광 알루미늄 톤 기판, 색은 의미로만 (청록 = SDA·데이터, 호박 = SCL, 빨강 = LED·신호) */
+:root { --pcb: #C9C7C1; --pcb-edge: #B3B1AA; --silk: #6E6C66; --metal: #A9AAA6; --chipc: #2B2C29; }
+@media (prefers-color-scheme: dark) { :root { --pcb: #363732; --pcb-edge: #4A4B45; --silk: #9A988F; --metal: #6F706B; --chipc: #141513; } }
+
+.hub { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 24px; align-items: start; }
+@media (max-width: 900px) { .hub { grid-template-columns: minmax(0, 1fr); } }
+.board-wrap { margin: 0; }
+#board { width: 100%; height: auto; display: block; font-family: var(--mono); overflow: visible; }
+
+#board .pcb { fill: var(--pcb); stroke: var(--pcb-edge); stroke-width: 2; }
+#board .hole { fill: var(--bg); stroke: var(--pcb-edge); }
+#board .silk { fill: var(--silk); font-size: 11px; letter-spacing: .04em; }
+#board .trace { fill: none; stroke: var(--pcb-edge); stroke-width: 3; stroke-linejoin: round; }
+#board .trace.data { stroke: var(--data); opacity: .55; }
+#board .trace.clk { stroke: var(--clk); opacity: .6; }
+#board .irq { fill: none; stroke: var(--on); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 200; stroke-dashoffset: 200; }
+#board .irq.run { animation: irqrun .6s ease-out forwards; }
+@keyframes irqrun { to { stroke-dashoffset: 0; } }
+
+#board .mcu rect { fill: var(--chipc); }
+#board .mcu .dot { fill: #555650; }
+#board .mcu-pins line { stroke: var(--metal); stroke-width: 3; }
+#board .chip-t { fill: #E6E4DE; font-size: 17px; font-weight: 700; }
+#board .chip-s { fill: #9C9A93; font-size: 12px; }
+#board .mcu.hit rect { fill: #3A2A27; }
+
+#board .metal { fill: var(--metal); }
+#board .metal-in { fill: #3E3F3B; }
+#board .lbl { fill: var(--ink); font-size: 12px; }
+#board .wk { fill: var(--ink-2); font-size: 11px; }
+#board .part { cursor: pointer; outline: none; }
+#board .part .wk { transition: fill .2s; }
+#board .part:hover .wk, #board .part:focus-visible .wk, #board .part.hot .wk { fill: var(--on); }
+#board .part:focus-visible > :first-child { stroke: var(--on); stroke-width: 3; }
+
+#board .led-body { fill: #8E8C85; transition: fill .2s; }
+#board .led-glow { fill: var(--on); opacity: 0; transition: opacity .25s; }
+#board #pLed.on .led-body { fill: var(--on); }
+#board #pLed.on .led-glow { opacity: .8; }
+
+#board .btn-base { fill: #3E3F3B; }
+#board .btn-cap { fill: #D9D7D1; stroke: #8E8C85; transition: transform .08s; transform-box: fill-box; transform-origin: center; }
+#board #pBtn.down .btn-cap { transform: scale(.86); }
+#board #pBtn:focus-visible .btn-base { stroke: var(--on); stroke-width: 3; }
+
+#board .header rect { fill: var(--chipc); }
+#board .header circle { fill: var(--metal); }
+#board .wire { fill: none; stroke-width: 3; stroke-linecap: round; }
+#board .wire.data { stroke: var(--data); }
+#board .wire.clk { stroke: var(--clk); }
+#board .wire.pwr { stroke: #B0463A; opacity: .7; }
+#board .wire.gnd { stroke: #55564F; }
+#board .wire.go { stroke-dasharray: 6 6; animation: flow .6s linear infinite; }
+@keyframes flow { to { stroke-dashoffset: -12; } }
+
+#board .lcd-pcb { fill: #2F5C3A; }
+#board .lcd-glass { fill: #9FB33A; }
+#board .lcd-t { fill: #1E2A0A; font-size: 14px; font-weight: 700; letter-spacing: .06em; }
+
+/* 줌인 이동: 보드가 부품 쪽으로 다가가고, 그 지점에서 바탕색 원이 화면을 덮는다 */
+.board-wrap { transition: transform .62s cubic-bezier(.6, 0, .2, 1), filter .62s ease; }
+.board-wrap.diving { transform: scale(2.6); filter: blur(1.5px); }
+body:has(.board-wrap.diving) { overflow: hidden; } /* 확대 중 가로 스크롤 생기지 않게 */
+.dive-cover { position: fixed; inset: 0; z-index: 50; background: var(--bg); pointer-events: none; animation: dive-cover .48s cubic-bezier(.7, 0, .3, 1) .2s both; }
+@keyframes dive-cover {
+  from { clip-path: circle(0 at var(--cx) var(--cy)); }
+  to { clip-path: circle(150vmax at var(--cx) var(--cy)); }
+}
+
+.status { font: 14px var(--mono); color: var(--ink-2); min-height: 3.2em; margin-top: 8px; padding: 10px 12px; border-left: 3px solid var(--on); background: var(--panel); border-radius: 0 var(--r) var(--r) 0; }
+.status b { color: var(--on); font-weight: 400; }
+
+.side { display: grid; gap: 16px; }
+.resume { display: grid; gap: 2px; padding: 12px 16px; border-radius: var(--r); background: var(--ink); color: var(--bg); text-decoration: none; }
+.resume[hidden] { display: none; }
+.resume small { font: 12px var(--mono); opacity: .7; }
+.resume:hover b { text-decoration: underline; text-underline-offset: 3px; }
+.hint-card { display: grid; gap: 4px; padding: 18px; border: 1px solid var(--line); border-top: 3px solid var(--on); border-radius: var(--r); background: var(--panel); text-decoration: none; }
+.hint-card .no { font: 13px var(--mono); color: var(--ink-2); }
+.hint-card b { font-size: 19px; }
+.hint-card small { color: var(--ink-2); font-size: 14px; }
+.hint-card .go { font: 13px var(--mono); color: var(--ink-2); margin-top: 6px; }
+.hint-card:hover .go { color: var(--on); }
+.map { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 0; font-size: 14px; }
+.map dt { font-family: var(--mono); color: var(--ink-2); font-size: 13px; }
+.map dd { margin: 0; }
+.map small { color: var(--ink-2); }
+
+.toc-title { margin-top: 64px; }
+.toc { border-top: 2px solid var(--ink); margin-top: 8px; }
+.toc a { display: grid; grid-template-columns: 5ch 1fr auto; gap: 16px; align-items: baseline; padding: 16px 4px; border-bottom: 1px solid var(--line); text-decoration: none; }
+.toc a:hover { background: var(--panel); }
+.toc a:hover .go { color: var(--on); }
+.toc .no { font-family: var(--mono); color: var(--ink-2); font-size: 14px; }
+.toc .t { font-size: 18px; font-weight: 600; }
+.toc .t small { display: block; font-size: 14px; font-weight: 400; color: var(--ink-2); margin-top: 2px; }
+.toc .go { font-family: var(--mono); font-size: 13px; color: var(--ink-2); white-space: nowrap; }

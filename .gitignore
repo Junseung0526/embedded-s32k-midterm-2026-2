@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.DS_Store
+
+# 노션 원문 사본은 공개 저장소에 올리지 않는다 (로컬에서 내용 대조용)
+reference/

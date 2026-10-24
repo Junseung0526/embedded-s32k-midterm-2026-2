@@ -1,0 +1,51 @@
+/* w2 페이지에서만 쓰는 모양 */
+.mmio-scene { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; margin-top: 14px; }
+.mm-map { display: grid; gap: 4px; font: 13px var(--mono); }
+.mm-region { display: grid; grid-template-columns: 9ch 1fr; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); transition: background .25s, border-color .25s; }
+.mm-region small { color: var(--ink-2); }
+.mm-region.target { border-color: var(--on); background: var(--on-soft); }
+.mm-region.hit { animation: flash .6s ease-out; }
+.mm-out { display: grid; gap: 8px; align-content: start; }
+.mm-box { border: 1px solid var(--line); border-radius: 5px; padding: 10px 12px; background: var(--bg); }
+.mm-box small { display: block; font-size: 12px; color: var(--ink-2); margin-bottom: 4px; }
+.mm-box b { font: 700 22px var(--mono); }
+.mm-box.hit { animation: flash .6s ease-out; }
+@media (max-width: 640px) { .mmio-scene { grid-template-columns: 1fr; } }
+
+.regtable tr.use td { background: var(--on-soft); }
+.mscr-read { font: 14px var(--mono); margin: 12px 0; }
+.mscr-read .ok { color: var(--ok); }
+.mscr-read .no { color: var(--on); }
+.calc { font: 15px var(--mono); margin: 12px 0 0; }
+
+.gpdo-map { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 3px; margin: 16px 0 10px; font: 12px var(--mono); }
+.gpdo-map .byte { border: 1px solid var(--line); border-radius: 3px; background: var(--bg); padding: 5px 4px; text-align: center; transition: background .25s, border-color .25s; }
+.gpdo-map .byte small { display: block; color: var(--ink-2); font-size: 10px; }
+.gpdo-map .byte.group-start { margin-left: 6px; }
+.gpdo-map .byte.ok { background: var(--on); border-color: var(--on); color: #fff; }
+.gpdo-map .byte.ok small { color: rgba(255, 255, 255, .85); }
+.gpdo-map .byte.wrong { border: 2px dashed var(--ink-2); }
+.gpdo-map .byte.ok.wrong { border-style: solid; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--ink-2); }
+.legend .sw { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; margin-right: 6px; }
+.legend .sw.ok { background: var(--on); }
+.legend .sw.wrong { border: 2px dashed var(--ink-2); }
+@media (max-width: 640px) { .gpdo-map { grid-template-columns: repeat(4, minmax(0, 1fr)); } .gpdo-map .byte.group-start { margin-left: 0; } }
+
+.pin { font: 13px var(--mono); color: var(--ink-2); display: inline-flex; align-items: center; gap: 8px; }
+.pin i { display: inline-block; width: 40px; height: 14px; border-bottom: 2px solid var(--ink-2); transition: transform .25s; }
+.pin.high i { border-bottom: 0; border-top: 2px solid var(--on); }
+.addrline { font: 12px var(--mono); color: var(--ink-2); }
+.addrline b { color: var(--on); font-weight: 400; }
+
+.cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0 20px; }
+@media (max-width: 760px) { .cmp { grid-template-columns: 1fr; } }
+
+.docs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 16px 0; }
+.doc { border: 1px solid var(--line); border-radius: 6px; background: var(--panel); padding: 14px; position: relative; }
+.doc .no { font: 13px var(--mono); color: var(--on); display: block; }
+.doc b { display: block; font-size: 17px; }
+.doc small { color: var(--ink-2); font-size: 13px; }
+.doc p { margin: 8px 0 0; font-size: 15px; }
+@media (max-width: 640px) { .docs { grid-template-columns: 1fr; } }
+.next-link { color: var(--ink-2); }

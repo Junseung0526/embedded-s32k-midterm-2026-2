@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4주차 I2C와 LCD · 임베디드</title>
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="w4.css">
+</head>
+<body>
+<header class="topbar">
+  <a href="../index.html">embedded-visual / 2026-2</a>
+  <span>w4 · i2c lcd</span>
+</header>
+
+<main class="page">
+  <section class="hero">
+    <div class="kicker">4주차 · chap04_i2c_lcd_ipl / _mcal · LPI2C1 · PCF8574 · HD44780</div>
+    <h1>선 두 가닥으로<br>LCD에 글자 한 자 쓰기</h1>
+    <p class="lede"><span class="xref" data-hl="#frameSvg path.sda" data-c="data">SDA</span>와 <span class="xref" data-hl="#frameSvg path.scl" data-c="clk">SCL</span> 두 선에 여러 장치가 같이 매달리는 I2C 버스, 그 버스로 1바이트를 받아 8개 핀으로 내보내는 PCF8574, 4비트씩 나눠 받는 LCD까지 차례로 따라가요.</p>
+  </section>
+
+  <!-- 01 오픈 드레인 -->
+  <section data-reveal>
+    <h2><span class="num">01</span>오픈 드레인과 풀업: 아무도 안 당기면 HIGH</h2>
+    <p class="prose">I2C 장치의 출력은 선을 <b>LOW로 끌어내리기만</b> 할 수 있어요(오픈 드레인). HIGH는 <span class="xref" data-hl="#odLab .od-rail .res">풀업 저항</span>(보통 4.7 kΩ)이 만들어요. 그래서 한 장치라도 당기면 선 전체가 LOW가 돼요. 이걸 <b>Wired-AND</b>라고 해요. 장치 버튼을 눌러 보세요.</p>
+    <div class="widget" id="odLab">
+      <div class="od-scene">
+        <div class="od-rail">VDD <span class="res">4.7 kΩ 풀업</span></div>
+        <div class="od-line" id="odLine"><span>SDA</span><b id="odLevel">HIGH</b></div>
+        <div class="od-devs" id="odDevs"></div>
+      </div>
+      <div class="row"><label class="signed show"><input type="checkbox" id="odPush"> 만약 Push-Pull 출력이었다면?</label></div>
+      <p class="hint" id="odNote"></p>
+    </div>
+    <div class="bubble"><div class="who"></div><div class="say"><b>전압 확인 (교수님 강조)</b>5 V LCD 백팩의 풀업이 5 V에 걸려 있으면 SDA/SCL idle 전압이 MCU가 견디는 전압을 넘을 수 있어요. 실습 전에 멀티미터로 꼭 재 보고, 3.3 V를 넘는데 MCU가 3.3 V용이면 레벨 시프터를 써요. 실습 보드는 I/O가 5 V로 점퍼 설정돼 있어서 바로 연결할 수 있어요.</div></div>
+  </section>
+
+  <!-- 02 프레임 -->
+  <section data-reveal>
+    <h2><span class="num">02</span>I2C 프레임 한 장을 비트 단위로</h2>
+    <p class="prose"><span class="xref" data-hl="#frameSvg rect.slot:first-of-type">START</span> → 7비트 주소 → R/W → ACK → 데이터 8비트 → ACK → <span class="xref" data-hl="#frameSvg rect.slot:last-of-type">STOP</span> 순서예요. 데이터는 <b>SCL이 LOW일 때만</b> 바뀌고, SCL이 HIGH인 동안에는 가만히 있어요. 그 규칙을 일부러 깨는 게 START와 STOP이에요.</p>
+    <div class="widget" id="frameLab">
+      <div class="row">
+        <label>주소(7비트) 0x<input class="hexin" id="fAddr" value="27" maxlength="2" aria-label="7비트 주소"></label>
+        <label>데이터 0x<input class="hexin" id="fData" value="49" maxlength="2" aria-label="데이터 바이트"></label>
+        <button class="key" type="button" id="fRw" aria-pressed="false">R/W = 0 (쓰기)</button>
+        <button class="key" type="button" id="fNack" aria-pressed="false">장치 없음 (NACK)</button>
+      </div>
+      <div id="frameSvg"></div>
+      <div class="st-ctrl frame-ctrl">
+        <button class="key" type="button" id="fPrev" aria-label="이전 비트">←</button>
+        <input type="range" id="fPos" min="0" max="19" value="0" aria-label="비트 위치">
+        <button class="key" type="button" id="fNext" aria-label="다음 비트">→</button>
+      </div>
+      <p class="st-note" id="fNote"></p>
+      <p class="calc" id="fByte"></p>
+    </div>
+    <div class="bubble"><div class="who"></div><div class="say"><b>낚시 1: 7비트 vs 8비트</b>백팩 주소 0x27(0b0100111)은 <b>7비트</b>예요. 버스로 나갈 때 뒤에 W 비트 0이 붙어서 한 바이트가 0x4E가 돼요. RTD API(<code>Lpi2c_Ip_MasterSetSlaveAddr</code>, <code>I2c_RequestType</code>)에는 <b>7비트 0x27</b>을 넣어요. 0x4E를 넣으면 비트가 한 칸 밀려서 엉뚱한 주소로 가요.</div></div>
+  </section>
+
+  <!-- 03 스캐너 -->
+  <section data-reveal>
+    <h2><span class="num">03</span>I2C 스캐너: 누가 ACK 하나?</h2>
+    <p class="prose">7비트 주소 0x03~0x77을 하나씩 돌면서 1바이트(0x00)를 보내 봐요. 그 주소에 장치가 있으면 9번째 클럭에서 SDA를 LOW로 당겨 ACK를 줘요.</p>
+    <div class="widget" id="scanLab">
+      <div class="row">
+        <button class="key" type="button" data-chip="0x27" aria-pressed="true">백팩: PCF8574 (0x27)</button>
+        <button class="key" type="button" data-chip="0x3F" aria-pressed="false">백팩: PCF8574A (0x3F)</button>
+        <button class="key" type="button" id="scanBtn">스캔 시작</button>
+      </div>
+      <div class="scan-grid" id="scanGrid"></div>
+      <p class="calc" id="scanOut"></p>
+    </div>
+    <div class="bubble"><div class="who"></div><div class="say"><b>낚시 5</b>스캐너는 LCD 주소에도 0x00을 보내요. 그러면 PCF8574 출력 핀이 엉뚱한 상태로 남아요. 스캔한 직후에는 <code>Lcd1602_Init()</code>을 꼭 다시 불러요.</div></div>
+  </section>
+
+  <!-- 04 PCF8574 -->
+  <section data-reveal>
+    <h2><span class="num">04</span>PCF8574: 1바이트 → LCD 핀 8개</h2>
+    <p class="prose">1602 LCD는 원래 병렬 16핀 모듈이에요. 뒤에 붙은 PCF8574가 I2C로 받은 1바이트를 P0~P7 핀으로 그대로 내보내요. 비트를 눌러서 LCD 쪽 신호가 어떻게 되는지 보세요.</p>
+    <div class="widget" id="pcfLab">
+      <div id="pcfReg"></div>
+      <div class="pcf-pins" id="pcfPins"></div>
+    </div>
+    <p class="prose">출력이 8개뿐인데 <span class="xref" data-hl="#pcfPins .pcf-pin:nth-child(1)">RS</span>, <span class="xref" data-hl="#pcfPins .pcf-pin:nth-child(3)">E</span>, <span class="xref" data-hl="#pcfPins .pcf-pin:nth-child(4)">백라이트</span>에 3개를 쓰고 R/W는 0으로 묶어 두니까, 데이터선은 <span class="xref" data-hl="#pcfPins .pcf-pin:nth-child(5)">DB4~DB7</span> 네 개만 남아요. 그래서 <b>4비트 모드</b>로 한 바이트를 두 번에 나눠 보내요.</p>
+  </section>
+
+  <!-- 05 4비트 전송 -->
+  <section data-reveal>
+    <h2><span class="num">05</span>'A' 한 글자가 LCD에 들어가기까지</h2>
+    <p class="prose"><code>Lcd1602_Putc('A')</code>는 <code>WriteByte(0x41, 데이터)</code>가 돼요. <span class="xref" data-hl="#nibbleStepper .nibs span:nth-of-type(1)">상위 니블(4)</span>을 먼저, <span class="xref" data-hl="#nibbleStepper .nibs span:nth-of-type(2)">하위 니블(1)</span>을 나중에 보내고, 니블마다 <b>E를 1로 올렸다가 0으로 떨어뜨리는 순간</b> LCD가 값을 잡아요(래치).</p>
+    <div id="nibbleStepper"></div>
+    <div class="bubble"><div class="who"></div><div class="say"><b>낚시 2</b>LCD는 E를 0→1로 올릴 때가 아니라 1→0으로 <b>떨어뜨리는 하강 에지</b>에서 데이터를 래치해요. 그래서 글자 하나에 I2C 쓰기가 최소 4번(니블 2개 × E 1, 0) 필요해요.</div></div>
+  </section>
+
+  <!-- 06 DDRAM -->
+  <section data-reveal>
+    <h2><span class="num">06</span>DDRAM과 커서 위치</h2>
+    <p class="prose">화면에 보이는 글자는 LCD 안의 DDRAM에 들어 있어요. <span class="xref" data-hl="#lcd16 span:nth-child(-n+16)" data-c="ink">1행</span>은 0x00~0x0F, <span class="xref" data-hl="#lcd16 span:nth-child(n+17)" data-c="ink">2행</span>은 0x40~0x4F예요. <code>Lcd1602_SetCursor(row, col)</code>은 명령 <code>0x80 | 행 시작 | col</code>을 보내요.</p>
+    <div class="widget" id="ddLab">
+      <div class="row">
+        <label>row <input type="range" id="ddRow" min="0" max="1" value="1"></label>
+        <label>col <input type="range" id="ddCol" min="0" max="15" value="0"></label>
+        <label>글자 <input class="hexin wide" id="ddText" value="Count: 0001" maxlength="16"></label>
+      </div>
+      <div class="lcd16" id="lcd16"></div>
+      <p class="calc" id="ddCalc"></p>
+    </div>
+    <p class="prose">초기화는 <code>0x30 → 0x30 → 0x30 → 0x20</code> 니블 순서로 LCD를 4비트 모드에 강제로 넣은 다음, <code>0x28</code>(4비트·2행·5×8), <code>0x0C</code>(디스플레이 ON), <code>0x06</code>(커서 증가), <code>0x01</code>(지우기)을 보내요.</p>
+  </section>
+
+  <!-- 07 계층 -->
+  <section data-reveal>
+    <h2><span class="num">07</span>IPL ↔ MCAL: 맨 아래 함수 하나만 바꾼다</h2>
+    <p class="prose">lcd1602 모듈은 층을 나눠 놨어요. I2C로 실제로 보내는 일은 <span class="xref" data-hl="#bridge">I2c_Lcd1602_Write()</span> 하나에만 있어서, 이 함수 속만 IPL에서 MCAL로 바꾸면 위층 코드는 하나도 안 고쳐도 돼요.</p>
+    <div class="widget" id="layerLab">
+      <div class="row" role="group" aria-label="드라이버 선택">
+        <button class="key" type="button" data-drv="ipl" aria-pressed="true">IPL (Lpi2c_Ip)</button>
+        <button class="key" type="button" data-drv="mcal" aria-pressed="false">MCAL (CDD_I2c)</button>
+      </div>
+      <div class="layers">
+        <div class="layer">main.c<small>Lcd1602_Puts, 카운터 포맷</small></div>
+        <div class="layer">High-Level API<small>Lcd1602_Init, Clear, SetCursor, Puts</small></div>
+        <div class="layer">Nibble / Command Engine<small>WriteByte, WriteNibble, PulseEnable</small></div>
+        <div class="layer swap" id="bridge">I2c_Lcd1602_Write(uint8_t value)<small>← 이 함수만 교체</small></div>
+        <div class="layer drv" id="drvBox"></div>
+        <div class="layer hw">LPI2C1 · PTC6(SDA) / PTC7(SCL) · 100 kHz</div>
+      </div>
+      <pre id="drvCode"></pre>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>하는 일</th><th>IPL (Lpi2c_Ip)</th><th>MCAL (CDD_I2c)</th></tr></thead>
+          <tbody>
+            <tr><td>초기화</td><td><code>Lpi2c_Ip_MasterInit(1U, &amp;I2c_Lpi2cMaster_HwChannel1_Channel0)</code></td><td><code>I2c_Init(NULL_PTR)</code> (Mcu, Port 먼저)</td></tr>
+            <tr><td>주소</td><td><code>Lpi2c_Ip_MasterSetSlaveAddr(1U, addr, FALSE)</code></td><td><code>.SlaveAddress</code>, <code>.BitsSlaveAddressSize = FALSE</code></td></tr>
+            <tr><td>전송</td><td><code>Lpi2c_Ip_MasterSendDataBlocking(1U, &amp;tx, 1U, TRUE, 100U)</code></td><td><code>I2c_SyncTransmit(LCD_I2C_MCAL_CHANNEL, &amp;request)</code></td></tr>
+            <tr><td>채널</td><td>물리 인스턴스 <code>1U</code> = LPI2C1</td><td>논리 채널 <code>0U</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="bubble"><div class="who"></div><div class="say"><b>낚시 3 · 4</b>I2C는 AUTOSAR 정식 표준 모듈이 아니에요. CAN, LIN, SPI 같은 차량 주력 버스가 아니라서 NXP가 표준 API 모양만 따르는 <b>CDD(Complex Device Driver)</b>로 제공해요. 그리고 IPL과 MCAL은 대체 관계라, <code>Lpi2c_Ip_MasterInit()</code>과 <code>I2c_Init()</code>을 한 빌드에서 같이 부르면 충돌해요.</div></div>
+  </section>
+
+  <section data-reveal>
+    <h2><span class="num">08</span>체크 퀴즈</h2>
+    <div class="widget" id="quiz"></div>
+  </section>
+</main>
+
+<script type="module" src="../assets/js/core.js"></script>
+<script type="module" src="../assets/js/register.js"></script>
+<script type="module" src="../assets/js/stepper.js"></script>
+<script type="module" src="../assets/js/quiz.js"></script>
+<script type="module" src="w4.js"></script>
+</body>
+</html>

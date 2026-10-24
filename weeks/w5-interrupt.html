@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5주차 인터럽트 · 임베디드</title>
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="w5.css">
+</head>
+<body>
+<header class="topbar">
+  <a href="../index.html">embedded-visual / 2026-2</a>
+  <span>w5 · interrupt</span>
+</header>
+
+<main class="page">
+  <section class="hero">
+    <div class="kicker">5주차 · chap05_interrupt_button_ipl / _mcal</div>
+    <h1>버튼 하나 눌렀을 때<br>CPU 안에서 일어나는 일</h1>
+    <p class="lede">USER_SW0(PTB26)를 누르면 SIUL2 EIRQ[13] → NVIC → 스택 → ISR → 복귀 순서로 흘러가요. 하나씩 눌러 보면서 따라가요.</p>
+  </section>
+
+  <!-- 01 폴링 vs 인터럽트 -->
+  <section data-reveal>
+    <h2><span class="num">01</span>폴링 vs 인터럽트</h2>
+    <p class="prose">폴링은 CPU가 루프를 돌며 "눌렸나?"를 계속 확인하는 방식이에요. 루프 안에 LCD 출력처럼 긴 작업이 있으면, 그 작업이 끝나야 다음 확인을 해요. 버튼을 시간 <span class="tangle" data-bind="pressT" data-label="버튼 누르는 시점">23</span>에 누르면 각각 언제 알아챌까요? 숫자를 끌어 보세요.</p>
+    <div class="widget" id="pollViz">
+      <p class="widget-title">시간 → <span class="badge extra"></span> 시간 단위는 설명용</p>
+      <div id="pollSvg"></div>
+      <div class="row"><label for="pressT">버튼 누르는 시점</label><input type="range" id="pressT" min="0" max="95" value="23"></div>
+      <p class="poll-result" id="pollResult"></p>
+    </div>
+    <p class="prose">핵심은 <b>"CPU가 기다리는 게 아니라, 하드웨어가 CPU를 부른다"</b>예요. 대신 ISR이 언제 끼어들지 모르기 때문에(비동기), main과 같이 쓰는 변수는 조심해서 다뤄야 해요.</p>
+  </section>
+
+  <!-- 02 벡터 테이블 -->
+  <section data-reveal>
+    <h2><span class="num">02</span>Cortex-M7 벡터 테이블</h2>
+    <p class="prose">벡터 테이블은 "예외 번호 → 처리 함수 주소"를 적어 둔 표예요. <span class="xref" data-hl="table.vtable tbody tr:nth-child(-n+5)" data-c="ink">0~15번</span>은 ARM 코어 내부 예외, <span class="xref" data-hl="table.vtable tbody tr:nth-child(6)">16번부터</span>가 칩 제조사(NXP)가 만든 외부 인터럽트(IRQ 0~)예요.</p>
+    <div class="table-wrap">
+      <table class="vtable">
+        <thead><tr><th>벡터</th><th>주소 오프셋</th><th>내용</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td><code>0x0000_0000</code></td><td>초기 스택 포인터 (Initial MSP)</td></tr>
+          <tr><td>1</td><td><code>0x0000_0004</code></td><td>Reset 핸들러</td></tr>
+          <tr><td>2</td><td><code>0x0000_0008</code></td><td>NMI</td></tr>
+          <tr class="mark"><td>3</td><td><code>0x0000_000C</code></td><td>HardFault: 잘못된 주소 역참조, 정렬 오류 등에서 여기로 점프</td></tr>
+          <tr><td>4~</td><td><code>0x0010~</code></td><td>MemManage, BusFault, SysTick …</td></tr>
+          <tr class="mark"><td>16~</td><td><code>0x0040~</code></td><td>외부 인터럽트 (NVIC IRQ 0~). SIUL_1_IRQn = IRQ 54도 여기</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="bubble"><div class="who"></div><div class="say"><b>시험 단골</b>"HardFault에 멈췄다"면 잘못된 메모리 접근 같은 치명적 오류로 벡터 3에 들어간 거예요. 이때 하드웨어가 자동 PUSH한 스택 프레임의 <b>PC 값</b>을 보면 문제를 일으킨 코드 줄을 찾을 수 있어요.</div></div>
+  </section>
+
+  <!-- 03 EIRQ 라우팅 -->
+  <section data-reveal>
+    <h2><span class="num">03</span>EIRQ 32개 → NVIC 벡터 4개</h2>
+    <p class="prose">S32K312의 외부 인터럽트 라인 EIRQ[0]~[31]은 각자 벡터를 갖지 않고, <span class="xref" data-hl="#groups .group">8개씩 묶여서</span> NVIC 벡터 4개(IRQ 53~56)를 같이 써요. <code>EIRQ[<span class="tangle" data-bind="eirqN" data-label="EIRQ 번호">13</span>]</code>은 어느 묶음일까요? 숫자를 끌어 보세요. 실습 버튼 PTB26은 EIRQ[13]이에요.</p>
+    <div class="widget" id="router">
+      <div class="row"><label for="eirqN">EIRQ 번호</label><input type="range" id="eirqN" min="0" max="31" value="13"><span class="chip on" id="eirqLabel"></span></div>
+      <div class="groups" id="groups"></div>
+      <div class="chain" id="chain"></div>
+      <div class="row"><button class="key" type="button" id="sendBtn">버튼 누르기 (신호 보내기)</button></div>
+    </div>
+    <div class="bubble"><div class="who"></div><div class="say"><b>낚시 2</b>PTB26 버튼에 <code>SIUL_0_IRQn</code>을 고르면 안 돼요. EIRQ 13은 8~15 그룹이라 반드시 <code>SIUL_1_IRQn</code>(IRQ 54)과 <code>SIUL2_EXT_IRQ_8_15_ISR</code>이에요. 틀리면 벡터 자체가 안 불려요.</div></div>
+  </section>
+
+  <!-- 04 인터럽트 따라가기 -->
+  <section data-reveal>
+    <h2><span class="num">04</span>인터럽트 한 번, 처음부터 끝까지</h2>
+    <p class="prose">IPL 실습 코드를 줄여서 가져왔어요. → 를 누르면 main 루프를 돌다가 버튼이 눌리고, <span class="xref" data-hl="#irqStepper .stack">스택</span>에 레지스터가 쌓이고, <span class="xref" data-hl="#irqStepper .flow .chip:nth-child(6)">콜백</span>이 실행되고, 원래 자리로 돌아와요.</p>
+    <div id="irqStepper"></div>
+  </section>
+
+  <!-- 05 Tail-chaining -->
+  <section data-reveal>
+    <h2><span class="num">05</span>Tail-chaining (꼬리 물기)</h2>
+    <p class="prose">ISR A가 끝날 때 ISR B가 이미 기다리고(pending) 있으면, 스택을 <span class="xref" data-hl="#tailBars .x">POP했다가 바로 다시 PUSH</span>하는 건 낭비예요(약 30 클럭). Cortex-M은 이 둘을 건너뛰고 바로 ISR B로 들어가요.</p>
+    <div class="widget" id="tail">
+      <div class="row"><button class="key" type="button" id="tailBtn" aria-pressed="true">Tail-chaining 켜짐</button></div>
+      <div class="tl" id="tailBars"></div>
+      <p class="hint" id="tailNote"></p>
+    </div>
+    <p class="prose">우선순위는 <b>숫자가 작을수록 높아요</b>(0이 최고). 실습은 버튼에 10을 줬어요. 그래서 더 급한 인터럽트(예: 0~5)는 버튼 ISR을 선점(Preemption)할 수 있어요.</p>
+  </section>
+
+  <!-- 06 ISR 원칙 -->
+  <section data-reveal>
+    <h2><span class="num">06</span>ISR 3대 원칙</h2>
+    <ol class="prose rules">
+      <li><b>Fast Exit</b>: ISR은 수 µs 안에 끝내요. 실행되는 동안 같거나 낮은 우선순위 인터럽트가 모두 막혀요.</li>
+      <li><b>무거운 일은 main으로</b>: LCD 출력(<code>Lcd1602_Puts</code>)은 I2C로 수십 바이트를 보내는 블로킹 작업이라 수 ms가 걸려요. <code>printf</code>, 딜레이도 금지예요.</li>
+      <li><b>공유 변수는 volatile</b>: 빠지면 컴파일러가 main 루프에서 값을 레지스터에 캐싱해서, ISR이 바꿔도 영원히 못 알아채요.</li>
+    </ol>
+    <div class="isr-cmp">
+      <div><p class="widget-title good">좋은 ISR: 알림만 남기고 즉시 복귀</p><pre data-code>
+void UserSw0_Callback(void)
+{
+    g_press_count++;
+    g_led_request ^= 1U;
+}</pre></div>
+      <div><p class="widget-title bad">나쁜 ISR: 시스템 전체가 멈춤</p><pre data-code>
+void UserSw0_Callback(void)
+{
+    Lcd1602_Puts("Count: 1");  // I2C 블로킹
+    printf("Pressed\n");       // 느림
+    Delay(1000);               // 금지
+}</pre></div>
+    </div>
+    <div class="bubble"><div class="who"></div><div class="say"><b>낚시 1</b>ISR 안에서 LCD 출력이나 printf를 해도 된다? 0점이에요. ISR은 카운트 증가와 플래그 토글만 하고, 출력은 main 루프가 맡아요.</div></div>
+  </section>
+
+  <!-- 07 채터링 -->
+  <section data-reveal>
+    <h2><span class="num">07</span>채터링과 디바운싱</h2>
+    <p class="prose">기계식 버튼은 한 번 누를 때 금속 접점이 1~10ms 동안 튀면서 붙었다 떨어지기를 반복해요. 에지 인터럽트는 <span class="xref" data-hl="#bounceSvg circle">상승 에지</span>마다 ISR을 부르니까, 한 번 눌렀는데 카운트가 여러 번 올라가요. 디바운싱은 "직전 이벤트와 너무 가까우면 무시"하는 방법이에요. 무시 구간을 <span class="tangle" data-bind="deb" data-label="무시 구간 ms">0</span> ms로 하면 몇 번 셀까요?</p>
+    <div class="widget" id="bounce">
+      <p class="widget-title">PTB26 입력 파형 (버튼 2번 누름) <span class="badge extra"></span> 예시 파형</p>
+      <div id="bounceSvg"></div>
+      <div class="row"><label for="deb">무시 구간 (DEBOUNCE)</label><input type="range" id="deb" min="0" max="10" step="0.5" value="0"><span class="chip" id="debLabel"></span></div>
+      <p class="poll-result" id="bounceResult"></p>
+    </div>
+    <pre data-code>
+void UserSw0_Callback(void)
+{
+    static uint32_t last_tick = 0U;
+    uint32_t now = GetSystemTick();
+    if ((now - last_tick) < DEBOUNCE_TICKS)
+    {
+        return;  // 너무 가까움 = 접점 튐, 무시
+    }
+    last_tick = now;
+    g_press_count++;
+    g_led_request ^= 1U;
+}</pre>
+  </section>
+
+  <!-- 08 IPL vs MCAL -->
+  <section data-reveal>
+    <h2><span class="num">08</span>IPL vs MCAL: 같은 일, 다른 API</h2>
+    <p class="prose">두 방식은 서로 <b>대체 관계</b>라서 한 프로젝트에서 섞으면 안 돼요. MCAL 프로젝트에서는 <code>Siul2_*_Ip</code>를 쓰지 않고, 하드웨어 번호 대신 기호 이름을 써요.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>하는 일</th><th>IPL (Siul2_Icu_Ip)</th><th>MCAL (Icu + Platform)</th></tr></thead>
+        <tbody>
+          <tr><td>인터럽트 컨트롤러</td><td><code>IntCtrl_Ip_Init(&amp;IntCtrlConfig_0)</code></td><td><code>Platform_Init(NULL_PTR)</code></td></tr>
+          <tr><td>ICU 초기화</td><td><code>Siul2_Icu_Ip_Init(0U, &amp;Siul2_Icu_Ip_0_Config_PB)</code></td><td><code>Icu_Init(NULL_PTR)</code></td></tr>
+          <tr><td>인터럽트 허용</td><td><code>Siul2_Icu_Ip_EnableInterrupt(0U, 13U)</code></td><td><code>Icu_EnableEdgeDetection(IcuConf_IcuChannel_USER_SW0)</code></td></tr>
+          <tr><td>알림 허용</td><td><code>Siul2_Icu_Ip_EnableNotification(0U, 13U)</code></td><td><code>Icu_EnableNotification(IcuConf_IcuChannel_USER_SW0)</code></td></tr>
+          <tr><td>LED</td><td><code>Siul2_Dio_Ip_WritePin(PTA_H_HALF, 13, val)</code></td><td><code>Dio_WriteChannel(DioConf_DioChannel_LED_RED, val)</code></td></tr>
+          <tr><td>채널 이름</td><td>하드웨어 번호 <code>13U</code></td><td>기호 <code>IcuConf_IcuChannel_USER_SW0</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>초기화 순서 (외우기)</h3>
+    <p class="order-label">IPL</p>
+    <div class="order" data-order="Clock_Ip_Init|Siul2_Port_Ip_Init|Siul2_Icu_Ip_Init|EnableInterrupt|EnableNotification|IntCtrl_Ip_Init|Lcd1602_Init"></div>
+    <p class="order-label">MCAL</p>
+    <div class="order" data-order="Mcu_Init|Mcu_InitClock|Mcu_DistributePllClock|Mcu_SetMode|Port_Init|I2c_Init|Platform_Init|Icu_Init|Icu_EnableNotification|Icu_EnableEdgeDetection|Lcd1602_Init"></div>
+    <div class="bubble"><div class="who"></div><div class="say"><b>낚시 6</b><code>Icu_Init()</code>만 부르면 인터럽트가 들어온다? 아니에요. <code>Icu_EnableEdgeDetection()</code>과 <code>Icu_EnableNotification()</code>까지 불러야 콜백이 호출돼요. IPL도 마찬가지로 Init 뒤에 EnableInterrupt, EnableNotification이 필요해요.</div></div>
+  </section>
+
+  <section data-reveal>
+    <h2><span class="num">09</span>체크 퀴즈</h2>
+    <div class="widget" id="quiz"></div>
+  </section>
+</main>
+
+<script type="module" src="../assets/js/core.js"></script>
+<script type="module" src="../assets/js/stepper.js"></script>
+<script type="module" src="../assets/js/quiz.js"></script>
+<script type="module" src="w5.js"></script>
+</body>
+</html>

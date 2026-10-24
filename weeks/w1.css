@@ -1,0 +1,65 @@
+/* w1 페이지에서만 쓰는 모양. UART TX 선은 데이터라서 --data(청록) */
+.traits { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; border-top: 2px solid var(--ink); margin: 18px 0; }
+.trait { padding: 14px 14px 16px 0; border-bottom: 1px solid var(--line); }
+.trait + .trait { padding-left: 14px; border-left: 1px solid var(--line); }
+.trait b { font-size: 17px; }
+.trait p { margin: 6px 0; font-size: 15px; }
+.trait small { color: var(--ink-2); font-size: 13px; }
+@media (max-width: 760px) {
+  .traits { grid-template-columns: 1fr 1fr; }
+  .trait:nth-child(3) { border-left: 0; padding-left: 0; }
+}
+
+.regbank { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 4px; font: 13px var(--mono); }
+.regbank button { font: inherit; padding: 8px 0; border-radius: 4px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+.regbank button.wide { grid-column: span 3; }
+.regbank button[aria-pressed="true"] { background: var(--on); border-color: var(--on); color: #fff; }
+@media (max-width: 640px) { .regbank { grid-template-columns: repeat(5, minmax(0, 1fr)); } .regbank button.wide { grid-column: span 5; } }
+#cpuRegs .st-note, #mapLab .st-note, #uartLab .st-note { margin: 14px 0 0; }
+
+.chain { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 14px; }
+.chain .arrow { color: var(--ink-2); font-family: var(--mono); }
+.chain .arrow.cut { color: var(--on); }
+.chip.broken { border-style: dashed; color: var(--ink-2); }
+
+.clk-tree { display: grid; grid-template-columns: auto auto 1fr auto auto; gap: 10px; align-items: center; margin-bottom: 14px; }
+.clk-src, .clk-out { display: grid; gap: 4px; }
+.clk-src small { color: var(--ink-2); margin-left: 4px; }
+.clk-arrow { font-family: var(--mono); color: var(--ink-2); }
+.pll { border: 2px solid var(--line); border-radius: 6px; padding: 10px 12px; text-align: center; font: 13px var(--mono); background: var(--bg); min-width: 9ch; }
+.pll b { display: block; font-size: 16px; }
+.pll-bar { height: 6px; background: var(--panel-2); border-radius: 3px; margin-top: 6px; overflow: hidden; }
+.pll-bar i { display: block; height: 100%; width: 0; background: var(--clk); transition: width 1.2s linear; }
+.pll.locked { border-color: var(--ok); }
+.clk-out.on .chip { background: var(--clk); border-color: var(--clk); color: #1C1C1A; }
+.clk-out.bad .chip { border-color: var(--on); color: var(--on); }
+@media (max-width: 640px) { .clk-tree { grid-template-columns: 1fr; } .clk-arrow { transform: rotate(90deg); justify-self: center; } }
+.poll-result { font: 15px var(--mono); margin: 12px 0 0; }
+.poll-result b { color: var(--on); }
+.poll-result .ok { color: var(--ok); }
+
+.memmap { display: grid; gap: 4px; font: 14px var(--mono); max-width: 640px; }
+.memmap button { text-align: left; font: inherit; padding: 10px 12px; border-radius: 4px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; display: flex; justify-content: space-between; gap: 10px; }
+.memmap button small { color: var(--ink-2); }
+.memmap button[aria-pressed="true"] { border-color: var(--on); background: var(--on-soft); }
+.memmap .sub { display: grid; gap: 3px; margin: 0 0 4px 22px; overflow: hidden; max-height: 0; transition: max-height .4s ease; }
+.memmap .sub.open { max-height: 200px; }
+.memmap .sub span { padding: 6px 10px; border-left: 2px solid var(--on); background: var(--panel-2); font-size: 13px; }
+
+svg.frame { width: 100%; height: auto; display: block; font-family: var(--mono); margin: 14px 0 4px; }
+svg.frame text { font-size: 11px; fill: var(--ink-2); }
+svg.frame .tx { fill: none; stroke: var(--data); stroke-width: 2.4; }
+svg.frame .slot.cur { fill: var(--on-soft); }
+svg.frame .slot { fill: transparent; }
+svg.frame text.cur { fill: var(--on); font-weight: 700; }
+.frame-ctrl { padding: 4px 0 6px; }
+.frame-ctrl input[type="range"] { flex: 1; }
+.hexin.wide { width: 16ch; }
+select { font: 14px var(--mono); padding: 4px 6px; border-radius: 4px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+
+.chain.path .chip.on { background: var(--data); border-color: var(--data); color: #fff; }
+.term { background: #121311; border-radius: 6px; margin-top: 10px; overflow: hidden; }
+.term-title { display: block; font: 12px var(--mono); color: #8D8B84; background: #2B2C29; padding: 6px 12px; }
+.term pre { margin: 0; padding: 12px; min-height: 4.5em; font: 14px/1.6 var(--mono); color: #D7E5C0; white-space: pre-wrap; }
+
+.case-row { margin-top: 12px; }

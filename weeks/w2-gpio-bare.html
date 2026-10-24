@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2주차 GPIO bare · 임베디드</title>
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="w2.css">
+</head>
+<body>
+<header class="topbar">
+  <a href="../index.html">embedded-visual / 2026-2</a>
+  <span>w2 · gpio bare</span>
+</header>
+
+<main class="page">
+  <section class="hero">
+    <div class="kicker">2주차 · chap02_gpio_bare · Config Tools 없이</div>
+    <h1>주소 하나에 값을 쓰면<br>LED가 켜진다</h1>
+    <p class="lede">SIUL2의 MSCR과 GPDO 레지스터를 직접 주소로 건드려서 D13 빨간 LED(PTA29)를 켜요. 드라이버가 대신해 주던 일을 맨손으로 해 보는 주차예요.</p>
+  </section>
+
+  <!-- 01 Memory-Mapped I/O -->
+  <section data-reveal>
+    <h2><span class="num">01</span>같은 문장, 다른 결과: Memory-Mapped I/O</h2>
+    <p class="prose">MCU에서는 RAM, Flash, 주변장치 레지스터가 <b>하나의 주소 공간</b>에 놓여 있어요. 그래서 <code>*ptr = 1U;</code>라는 똑같은 문장도 <code>ptr</code>이 어디를 가리키느냐에 따라 결과가 완전히 달라요.</p>
+    <div class="widget" id="mmio">
+      <div class="row" role="group" aria-label="ptr이 가리킬 곳">
+        <button class="key" type="button" data-target="sram" aria-pressed="true">ptr = &amp;counter (SRAM 변수)</button>
+        <button class="key" type="button" data-target="gpdo" aria-pressed="false">ptr = GPDO29 (0x4029131E)</button>
+      </div>
+      <pre data-code>*ptr = 1U;</pre>
+      <div class="row"><button class="key" type="button" id="mmioRun">실행</button><button class="key" type="button" id="mmioReset">되돌리기</button></div>
+      <div class="mmio-scene">
+        <div class="mm-map" id="mmMap"></div>
+        <div class="mm-out">
+          <div class="mm-box" id="mmSram"><small>SRAM의 counter</small><b>0</b></div>
+          <div class="mm-box" id="mmBoard"><small>보드 D13 (PTA29)</small><span class="led"><i></i>꺼짐</span></div>
+        </div>
+      </div>
+      <p class="hint" id="mmioNote"></p>
+    </div>
+    <div class="bubble"><div class="who"></div><div class="say"><b>그래서 volatile</b>컴파일러 눈에는 레지스터도 그냥 변수처럼 보여요. "값이 안 바뀌네" 하고 쓰기나 읽기를 지워 버리면, 코드는 멀쩡한데 보드는 안 움직여요. 그래서 레지스터 주소는 항상 <code>(*(volatile uint32_t *)주소)</code>로 감싸요. 자세한 건 <a href="hints.html">힌트 페이지 05</a>에 있어요.</div></div>
+  </section>
+
+  <!-- 02 SIUL2 -->
+  <section data-reveal>
+    <h2><span class="num">02</span>SIUL2: 핀을 담당하는 주변장치</h2>
+    <p class="prose">SIUL2(System Integration Unit Lite2)는 핀 기능 선택과 GPIO 입출력을 맡아요. 레지스터가 여섯 종류 있는데, 이번 주는 <b>MSCR</b>과 <b>GPDO</b> 두 개만 써요.</p>
+    <div class="table-wrap">
+      <table class="regtable">
+        <thead><tr><th>레지스터</th><th>이름</th><th>하는 일</th></tr></thead>
+        <tbody>
+          <tr class="use"><td><code>MSCR[n]</code></td><td>Multiplexed Signal Configuration</td><td>핀 기능, 출력·입력 버퍼, 전기적 속성 설정</td></tr>
+          <tr><td><code>IMCR[n]</code></td><td>Input Multiplexed Signal Configuration</td><td>주변장치 입력 신호가 어느 pad에서 올지 선택</td></tr>
+          <tr class="use"><td><code>GPDO[n]</code></td><td>GPIO Pad Data Output</td><td>GPIO 출력 값 쓰기</td></tr>
+          <tr><td><code>GPDI[n]</code></td><td>GPIO Pad Data Input</td><td>GPIO 입력 값 읽기</td></tr>
+          <tr><td><code>PGPDO[n]</code></td><td>Parallel GPIO Pad Data Output</td><td>여러 GPIO 출력을 한 번에 쓰기</td></tr>
+          <tr><td><code>PGPDI[n]</code></td><td>Parallel GPIO Pad Data Input</td><td>여러 GPIO 입력을 한 번에 읽기</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 03 MSCR -->
+  <section data-reveal>
+    <h2><span class="num">03</span>MSCR: 이 핀을 "GPIO 출력"으로</h2>
+    <p class="prose">MSCR은 핀마다 하나씩 있는 32비트 설정 레지스터예요. 이번에 볼 필드는 두 개예요. <span class="xref" data-hl="#mscrReg .bit[title=&quot;bit 21&quot;]">OBE</span>(비트 21, Output Buffer Enable)를 1로 켜고, <span class="xref" data-hl="#mscrReg .bit[title=&quot;bit 3&quot;], #mscrReg .bit[title=&quot;bit 2&quot;], #mscrReg .bit[title=&quot;bit 1&quot;], #mscrReg .bit[title=&quot;bit 0&quot;]">SSS</span>(비트 3:0, Source Signal Select)를 GPIO 기능인 0으로 맞춰요. 비트를 직접 눌러 보세요.</p>
+    <div class="widget" id="mscrLab">
+      <div id="mscrReg"></div>
+      <p class="mscr-read" id="mscrRead"></p>
+      <div class="row"><button class="key" type="button" id="mscrGoal">GPIO 출력 값(0x00200000)으로 맞추기</button><button class="key" type="button" id="mscrClear">0으로</button></div>
+    </div>
+
+    <h3>MSCR[n]의 주소</h3>
+    <p class="prose">MSCR은 32비트(4바이트) 배열이라 계산이 단순해요. <code>MSCR[n] = 0x40290000 + 0x0240 + 4 × n</code>. 빨간 숫자를 끌어 보세요: <code>MSCR[<span class="tangle" data-bind="mscrN" data-label="MSCR 번호">29</span>]</code></p>
+    <div class="widget">
+      <div class="row"><label for="mscrN">n</label><input type="range" id="mscrN" min="0" max="40" value="29"><span class="chip on" id="mscrNLabel"></span></div>
+      <p class="calc" id="mscrCalc"></p>
+    </div>
+
+    <h3>읽기-수정-쓰기: GpioBare_SetOutput()</h3>
+    <p class="prose">다른 비트는 건드리지 않고 필요한 필드만 바꾸려면, 레지스터를 <b>읽어서 → 지역 변수에서 고치고 → 다시 써요</b>. 오른쪽 위가 지역 변수 <span class="xref" data-hl="#rmwStepper .st-side .reg:nth-of-type(1)">value</span>, 아래가 실제 레지스터 <span class="xref" data-hl="#rmwStepper .st-side .reg:nth-of-type(2)">MSCR[29]</span>예요.</p>
+    <div id="rmwStepper"></div>
+  </section>
+
+  <!-- 04 GPDO 역순 -->
+  <section data-reveal>
+    <h2><span class="num">04</span>GPDO는 4개씩 거꾸로 놓여 있다</h2>
+    <p class="prose">GPDO는 GPIO 하나당 1바이트예요. 그런데 <b>4바이트 묶음 안에서 순서가 뒤집혀</b> 있어요. <span class="xref" data-hl="#gpdoMap .byte:nth-child(1)">0x1300 칸</span>에 GPDO0이 아니라 GPDO3이 있어요. 숫자를 끌어서 GPIO 번호를 바꿔 보세요: <code>GPIO[<span class="tangle" data-bind="gpioN" data-label="GPIO 번호">29</span>]</code></p>
+    <div class="widget" id="gpdoLab">
+      <div class="row"><label for="gpioN">GPIO</label><input type="range" id="gpioN" min="0" max="31" value="29"><span class="chip on" id="gpioLabel"></span></div>
+      <div class="gpdo-map" id="gpdoMap"></div>
+      <div class="legend"><span><i class="sw ok"></i>진짜 GPDO 칸</span><span><i class="sw wrong"></i><code>0x1300 + n</code>으로 잘못 계산한 칸</span></div>
+      <p class="calc" id="gpdoCalc"></p>
+    </div>
+    <div class="bubble"><div class="who"></div><div class="say"><b>3초 암산법</b>① n보다 작거나 같은 가장 가까운 4의 배수를 구해요. ② 4로 나눈 나머지 R을 구해요. ③ 더할 바이트 = (4의 배수) + (3 − R). GPIO[29]면 28 + (3 − 1) = 30 = <code>0x1E</code>라서 <b>0x131E</b>예요.</div></div>
+    <div class="bubble"><div class="who"></div><div class="say"><b>낚시</b>MSCR 번호와 GPIO 번호는 다른 레지스터의 인덱스예요. PTA29는 우연히 둘 다 29지만, 항상 IOMUX 표에서 따로따로 확인해요.</div></div>
+  </section>
+
+  <!-- 05 main.c -->
+  <section data-reveal>
+    <h2><span class="num">05</span>chap02_gpio_bare를 한 줄씩</h2>
+    <p class="prose"><code>USE_SDK_HEADER_ACCESS = 0</code>(직접 주소 매크로)일 때의 흐름이에요. 함수 안으로 들어가는 줄은 매크로가 실제로 어느 주소에 쓰는지까지 보여 줘요.</p>
+    <div id="mainStepper"></div>
+    <div class="bubble"><div class="who"></div><div class="say"><b>왜 처음에 Off부터 쓸까</b><code>LedInit()</code>이 출력으로 바꾸자마자 Off 레벨을 쓰는 건, 전원을 켠 직후 핀이 떠 있거나 남은 전압 때문에 LED가 잠깐 깜빡이는 <b>글리치</b>를 막기 위해서예요.</div></div>
+  </section>
+
+  <!-- 06 직접 vs SDK -->
+  <section data-reveal>
+    <h2><span class="num">06</span>직접 주소 vs SDK 헤더</h2>
+    <p class="prose"><code>USE_SDK_HEADER_ACCESS</code>를 1로 바꾸면 같은 일을 <code>IP_SIUL2</code> 구조체로 해요. 결과(LED 점멸)는 똑같아요.</p>
+    <div class="cmp">
+      <div><p class="widget-title">직접 주소 매크로 (0)</p><pre data-code>
+GpioBare_SetOutput(LED_RED_MSCR_INDEX);
+GpioBare_Write(LED_RED_GPDO_INDEX, level);
+// 속: *(volatile uint8_t *)0x4029131E = level;</pre></div>
+      <div><p class="widget-title">SDK 헤더 구조체 (1)</p><pre data-code>
+IP_SIUL2->MSCR[29] = value;
+IP_SIUL2->GPDO29   = level;
+// 주소 계산은 헤더가 대신</pre></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>비교</th><th>직접 주소 매크로</th><th>SDK 헤더</th></tr></thead>
+        <tbody>
+          <tr><td>주소 계산 이해</td><td>높음</td><td>낮음</td></tr>
+          <tr><td>코드 가독성</td><td>낮음</td><td>높음</td></tr>
+          <tr><td>오타 위험</td><td>높음</td><td>낮음</td></tr>
+          <tr><td>이식성</td><td>낮음</td><td>높음</td></tr>
+          <tr><td>목적</td><td>레지스터 구조 이해 (학습)</td><td>실무형 접근</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="prose">실무에서는 SDK 헤더나 드라이버를 먼저 써요. 그래도 한 번은 맨손으로 해 보는 이유는, 하드웨어가 결국 주소와 비트 필드로 움직인다는 걸 알아야 HAL·MCAL·RTD가 무엇을 대신해 주는지 보이기 때문이에요.</p>
+    <p class="prose hint">Config Tools도 클럭 API도 안 썼는데 GPIO가 움직이는 이유: S32DS 기본 startup 코드가 최소한의 시스템/버스 클럭을 미리 켜 두기 때문이에요.</p>
+  </section>
+
+  <!-- 07 자료 순서 -->
+  <section data-reveal>
+    <h2><span class="num">07</span>핀 정보는 세 문서를 차례로</h2>
+    <p class="prose">"D13 LED는 어느 주소?"의 답은 한 문서에 다 있지 않아요. 숫자는 추측하지 말고 문서에서 직접 확인해요.</p>
+    <div class="docs">
+      <div class="doc"><span class="no">1</span><b>보드 매뉴얼</b><small>p.19 User LED Indicators</small><p>D13 = RGBLED0_RED = <code>PTA29</code>, Active High</p></div>
+      <div class="doc"><span class="no">2</span><b>IOMUX 표</b><small>PTA29 행</small><p><code>SIUL_MSCR29</code>, <code>GPIO[29]</code></p></div>
+      <div class="doc"><span class="no">3</span><b>RTD 헤더</b><small>S32K312_SIUL2.h</small><p>base <code>0x40290000</code>, MSCR <code>+0x240</code>, GPDO29 <code>+0x131E</code></p></div>
+    </div>
+    <p class="prose">Active High라서 1을 쓰면 켜지고 0을 쓰면 꺼져요. Active Low라면 반대예요. LED가 초록이나 파랑으로 켜지면 GPDO 번호를 잘못 계산했을 가능성이 커요.</p>
+  </section>
+
+  <section data-reveal>
+    <h2><span class="num">08</span>체크 퀴즈</h2>
+    <div class="widget" id="quiz"></div>
+    <p class="next-link">다음: <a href="w3-ipl-mcal.html">같은 LED를 IPL과 MCAL 드라이버로 (3주차)</a> →</p>
+  </section>
+</main>
+
+<script type="module" src="../assets/js/core.js"></script>
+<script type="module" src="../assets/js/register.js"></script>
+<script type="module" src="../assets/js/stepper.js"></script>
+<script type="module" src="../assets/js/quiz.js"></script>
+<script type="module" src="w2.js"></script>
+</body>
+</html>

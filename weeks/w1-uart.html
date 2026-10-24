@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1주차 S32K3와 UART · 임베디드</title>
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="w1.css">
+</head>
+<body>
+<header class="topbar">
+  <a href="../index.html">embedded-visual / 2026-2</a>
+  <span>w1 · uart</span>
+</header>
+
+<main class="page">
+  <section class="hero">
+    <div class="kicker">1주차 · chap01_hello_uart · LPUART6 · 115200 8N1</div>
+    <h1>보드 속 상태를<br>PC 화면에 글자로 꺼내기</h1>
+    <p class="lede">LED 하나로는 알 수 있는 게 너무 적어요. 그래서 첫 주에는 <code>printf()</code> 한 줄이 선을 타고 PC 터미널까지 가는 길을 만들어요. 그 전에 S32K312가 어떤 칩이고 어떻게 깨어나는지부터 봐요.</p>
+  </section>
+
+  <!-- 01 임베디드 -->
+  <section data-reveal>
+    <h2><span class="num">01</span>임베디드 시스템의 4대 특성</h2>
+    <p class="prose">PC는 사용자가 아무 프로그램이나 깔아서 돌리지만, 임베디드 시스템은 <b>정해진 입력을 읽고 정해진 출력을 제어하는 전용 컴퓨터</b>예요. 자동차 한 대에 이런 ECU가 수십~100개 넘게 들어가요.</p>
+    <div class="traits">
+      <div class="trait"><b>자원 제약</b><p>CPU, 메모리, 전력 예산이 정해져 있어요.</p><small>MCU는 PC보다 SRAM과 Flash가 작아요</small></div>
+      <div class="trait"><b>실시간성</b><p>결과가 맞는 것뿐 아니라 마감 시간까지 지켜야 해요.</p><small>에어백 판단은 수 ms 안에</small></div>
+      <div class="trait"><b>전용성</b><p>목적에 딱 맞춘 하드웨어와 소프트웨어예요.</p><small>세탁기 제어기는 세탁만</small></div>
+      <div class="trait"><b>하드웨어 의존성</b><p>핀, 클럭, 레지스터를 직접 제어해요.</p><small>TX 핀 설정이 틀리면 출력이 아예 없음</small></div>
+    </div>
+  </section>
+
+  <!-- 02 Cortex-M7 -->
+  <section data-reveal>
+    <h2><span class="num">02</span>Cortex-M7 레지스터</h2>
+    <p class="prose">S32K312의 CPU 코어는 Arm Cortex-M7(32비트, ARMv7-M, Thumb-2)이에요. <span class="xref" data-hl="#regBank button">레지스터</span>를 눌러서 역할을 확인해 보세요.</p>
+    <div class="widget" id="cpuRegs">
+      <div class="regbank" id="regBank"></div>
+      <p class="st-note" id="regNote"></p>
+    </div>
+    <p class="prose">벡터 테이블 <b>0번은 초기 스택 포인터</b>, <b>1번은 Reset handler 주소</b>예요. 리셋되면 <code>Reset → Vector Table → Reset Handler → Runtime Init → main()</code> 순서로 C 프로그램이 시작돼요.</p>
+  </section>
+
+  <!-- 03 부팅 / 클럭 -->
+  <section data-reveal>
+    <h2><span class="num">03</span>전원이 들어와서 main()까지</h2>
+    <div class="widget" id="bootLab">
+      <p class="widget-title">부팅 흐름</p>
+      <div class="chain" id="bootChain"></div>
+      <div class="row"><button class="key" type="button" id="bootBtn">전원 켜기</button></div>
+      <p class="hint" id="bootNote">BAF(Boot Assist Flash)는 NXP가 칩에 넣어 둔 부팅 도우미 코드, IVT(Image Vector Table)는 부팅 이미지와 사용자 코드 진입 정보예요.</p>
+    </div>
+
+    <h3>클럭 트리와 PLL Lock</h3>
+    <p class="prose">클럭은 <code>FIRC / SIRC / FXOSC → PLL → System · Bus · Peripheral Clock</code>으로 흘러가요. <span class="xref" data-hl="#pllBox">PLL</span>은 입력 클럭을 몇 배로 키워서 빠른 클럭(코어 120 MHz)을 만드는데, 목표 주파수에 <b>고정(Lock)되기 전에</b> 나눠 주면 안 돼요.</p>
+    <div class="widget" id="pllLab">
+      <div class="clk-tree">
+        <div class="clk-src"><span class="chip">FIRC <small>내부 고속 RC</small></span><span class="chip">SIRC <small>내부 저속 저전력 RC</small></span><span class="chip">FXOSC <small>외부 크리스털</small></span></div>
+        <div class="clk-arrow">→</div>
+        <div class="pll" id="pllBox"><b>PLL</b><span id="pllState">꺼짐</span><div class="pll-bar"><i id="pllBar"></i></div></div>
+        <div class="clk-arrow">→</div>
+        <div class="clk-out" id="clkOut"><span class="chip">System</span><span class="chip">Bus</span><span class="chip">Peripheral (LPUART6…)</span></div>
+      </div>
+      <div class="row">
+        <button class="key" type="button" id="pllWait">Lock 기다린 뒤 분배 (정답)</button>
+        <button class="key" type="button" id="pllRush">Lock 전에 바로 분배</button>
+      </div>
+      <p class="poll-result" id="pllResult"></p>
+    </div>
+    <pre data-code>
+Clock_Ip_Init(&Clock_Ip_aClockConfig[0]);
+#if defined(FEATURE_CLOCK_IP_HAS_SPLL_CLK)
+while (CLOCK_IP_PLL_LOCKED != Clock_Ip_GetPllStatus()) { }   // Lock 대기
+#endif
+Clock_Ip_DistributePll();                                     // 그 다음에 분배
+Siul2_Port_Ip_Init(NUM_OF_CONFIGURED_PINS_PortContainer_0_BOARD_InitPeripherals,
+                   g_pin_mux_InitConfigArr_PortContainer_0_BOARD_InitPeripherals);
+Lpuart_Uart_Ip_Init(UART_CHANNEL, &Lpuart_Uart_Ip_xHwConfigPB_6);
+printf("Hello S32K3, %s %s\r\n", STUDENT_ID, STUDENT_NAME);
+while (1) { }</pre>
+    <p class="prose">순서는 <b>클럭 → 핀 → LPUART6 → printf</b>예요. 이 순서를 안 지키면 출력이 안 나오거나 HardFault가 나요.</p>
+  </section>
+
+  <!-- 04 메모리 맵 -->
+  <section data-reveal>
+    <h2><span class="num">04</span>메모리 맵: 주소가 다 RAM은 아니다</h2>
+    <p class="prose">MCU에서 주소는 RAM만 뜻하지 않아요. 영역을 눌러 보세요. <span class="xref" data-hl="#memMap button:nth-of-type(5)">주변장치(Peripheral) 영역</span> 안에는 UART, GPIO, I2C의 제어 레지스터가 들어 있어요.</p>
+    <div class="widget" id="mapLab">
+      <div class="memmap" id="memMap"></div>
+      <p class="st-note" id="mapNote"></p>
+    </div>
+  </section>
+
+  <!-- 05 UART 프레임 -->
+  <section data-reveal>
+    <h2><span class="num">05</span>UART 프레임: 8-N-1</h2>
+    <p class="prose">UART는 클럭 선 없이 TX/RX만으로 주고받는 비동기 직렬 통신이에요. 그래서 <b>양쪽이 같은 속도(baud rate)</b>를 미리 약속해야 해요. 쉬는 동안 선은 HIGH, <span class="xref" data-hl="#uartSvg rect.slot:nth-of-type(2)">Start(LOW)</span>로 시작해서 데이터 8비트를 <span class="xref" data-hl="#uartSvg rect.slot:nth-of-type(3)" data-c="data">LSB부터</span> 보내고, <span class="xref" data-hl="#uartSvg rect.slot:nth-of-type(11)">Stop(HIGH)</span>으로 끝나요.</p>
+    <div class="widget" id="uartLab">
+      <div class="row"><label>보낼 글자 <input class="hexin" id="uChar" value="H" maxlength="1" aria-label="보낼 글자"></label><span class="chip" id="uCode"></span></div>
+      <div id="uartSvg"></div>
+      <div class="st-ctrl frame-ctrl">
+        <button class="key" type="button" id="uPrev" aria-label="이전 비트">←</button>
+        <input type="range" id="uPos" min="0" max="10" value="0" aria-label="비트 위치">
+        <button class="key" type="button" id="uNext" aria-label="다음 비트">→</button>
+      </div>
+      <p class="st-note" id="uNote"></p>
+    </div>
+
+    <h3>얼마나 걸릴까</h3>
+    <div class="widget" id="timeLab">
+      <div class="row">
+        <label>문자열 <input class="hexin wide" id="tText" value="Hello S32K3" aria-label="보낼 문자열"></label>
+        <label class="signed show"><input type="checkbox" id="tCrlf" checked> 끝에 \r\n 붙이기</label>
+        <label>속도 <select id="tBaud"><option value="9600">9600</option><option value="115200" selected>115200</option></select> bps</label>
+      </div>
+      <p class="poll-result" id="tOut"></p>
+    </div>
+  </section>
+
+  <!-- 06 VCOM -->
+  <section data-reveal>
+    <h2><span class="num">06</span>printf가 PC까지 가는 길</h2>
+    <p class="prose">MCU에는 화면이 없어서 <code>printf()</code>가 그냥은 아무 데도 안 나가요. 그래서 printf가 마지막에 부르는 저수준 함수 <code>_write()</code>를 직접 만들어서, 바이트를 <span class="xref" data-hl="#pathChain .chip:nth-child(7)" data-c="data">LPUART6</span>로 보내요(retargeting). 보드의 OpenSDA 칩이 그걸 USB 가상 COM 포트(VCOM)로 PC에 넘겨줘요.</p>
+    <div class="widget" id="pathLab">
+      <div class="row" role="group" aria-label="콘솔 UART 선택">
+        <button class="key" type="button" data-uart="6" aria-pressed="true">LPUART6 (PTA16 TX / PTA15 RX)</button>
+        <button class="key" type="button" data-uart="0" aria-pressed="false">LPUART0 (PTA8 / PTA9)로 잘못 설정</button>
+      </div>
+      <div class="chain path" id="pathChain"></div>
+      <div class="row"><button class="key" type="button" id="pathSend">printf 보내기</button></div>
+      <div class="term" id="term"><span class="term-title">PuTTY · COM (115200 8N1)</span><pre id="termOut"></pre></div>
+    </div>
+    <div class="bubble"><div class="who"></div><div class="say"><b>낚시</b>VCOM은 보드에서 <b>LPUART6</b>(PTA15 = RX, PTA16 = TX)에 배선돼 있어요. LPUART0 / PTA8 / PTA9로 설정하면 VCOM에 안 닿아서 터미널에 아무것도 안 보여요. 출력이 없으면 LPUART6, PTA16 = TX, PTA15 = RX, 채널 6U부터 확인해요.</div></div>
+  </section>
+
+  <!-- 07 _write -->
+  <section data-reveal>
+    <h2><span class="num">07</span>_write() 한 줄씩 (빈칸 채우기 단골)</h2>
+    <p class="prose">반환값 규칙 세 가지가 시험 포인트예요. 잘못된 인자면 <b>0</b>, 송신 실패면 <b>-1</b>, 성공하면 <b>보낸 바이트 수 len</b>.</p>
+    <div class="row case-row" role="group" aria-label="시나리오">
+      <button class="key" type="button" data-case="ok" aria-pressed="true">정상 전송</button>
+      <button class="key" type="button" data-case="null" aria-pressed="false">ptr == NULL</button>
+      <button class="key" type="button" data-case="fail" aria-pressed="false">송신 실패</button>
+    </div>
+    <div id="writeStepper"></div>
+  </section>
+
+  <section data-reveal>
+    <h2><span class="num">08</span>체크 퀴즈</h2>
+    <div class="widget" id="quiz"></div>
+  </section>
+</main>
+
+<script type="module" src="../assets/js/core.js"></script>
+<script type="module" src="../assets/js/stepper.js"></script>
+<script type="module" src="../assets/js/quiz.js"></script>
+<script type="module" src="w1.js"></script>
+</body>
+</html>

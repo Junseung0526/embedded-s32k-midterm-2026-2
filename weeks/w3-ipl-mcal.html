@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3주차 IPL과 MCAL · 임베디드</title>
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="w3.css">
+</head>
+<body>
+<header class="topbar">
+  <a href="../index.html">embedded-visual / 2026-2</a>
+  <span>w3 · ipl / mcal</span>
+</header>
+
+<main class="page">
+  <section class="hero">
+    <div class="kicker">3주차 · chap03_gpio_ipl / chap03_gpio_mcal · RTD 7.0.1</div>
+    <h1>같은 LED, 세 가지 높이에서 켜기</h1>
+    <p class="lede">2주차에는 주소 <code>0x4029131E</code>에 직접 1을 썼어요. 이번에는 NXP 드라이버(IPL)와 AUTOSAR 표준 드라이버(MCAL)로 똑같은 D13 LED(PTA29)를 켜 보고, 층이 올라갈수록 무엇이 숨겨지는지 비교해요.</p>
+  </section>
+
+  <!-- 01 왜 -->
+  <section data-reveal>
+    <h2><span class="num">01</span>왜 다시 GPIO인가: 추상화</h2>
+    <p class="prose">2주차 방식은 프로젝트가 커지면 핀 번호, 베이스 주소, 오프셋 계산이 여러 파일에 흩어져요. 보드가 바뀌면 그걸 전부 찾아서 고쳐야 해요.</p>
+    <div class="bubble"><div class="who"></div><div class="say"><b>추상화의 진짜 뜻 (서술형)</b>하드웨어를 숨기거나 모르게 만드는 게 아니에요. <b>하드웨어 의존성을 코드의 어디에 모아 둘지 정하는 설계 방법</b>이에요.</div></div>
+    <p class="prose">얻는 것 네 가지: ① 이식성(MCU가 바뀌어도 응용 코드는 그대로) ② 표준화(같은 API 규격) ③ 분업(설정 담당과 로직 담당을 나눔) ④ 안전성(검증된 드라이버를 재사용해 결함이 줄어듦)</p>
+  </section>
+
+  <!-- 02 엘리베이터 -->
+  <section data-reveal>
+    <h2><span class="num">02</span>층 엘리베이터: LED를 켜는 한 줄이 내려가는 길</h2>
+    <p class="prose">어느 층에서 LED를 켤지 고르고 "실행"을 눌러 보세요. 위층에서 부를수록 하드웨어 주소는 더 깊이 숨겨져요. 결국 맨 아래에서는 똑같이 <span class="xref" data-hl="#floors .floor:nth-child(5)">SIUL2 레지스터</span>에 값이 써져요.</p>
+    <div class="widget" id="lift">
+      <div class="row" role="group" aria-label="어느 층에서 켤까">
+        <button class="key" type="button" data-way="bare" aria-pressed="false">2장 Bare</button>
+        <button class="key" type="button" data-way="ipl" aria-pressed="true">3장 IPL</button>
+        <button class="key" type="button" data-way="mcal" aria-pressed="false">3장 MCAL</button>
+        <button class="key" type="button" id="liftRun">실행</button>
+      </div>
+      <div class="lift">
+        <div class="floors" id="floors"></div>
+        <div class="lift-side">
+          <pre id="liftCode"></pre>
+          <div class="row"><span class="led" id="liftLed"><i></i>D13 (PTA29)</span></div>
+          <dl class="vars" id="liftFacts"></dl>
+        </div>
+      </div>
+    </div>
+    <ul class="prose legend-list">
+      <li><b>HLD</b>(High Level Driver): AUTOSAR MCAL 사양을 따르는 표준 상위 드라이버. 예: <code>Port.h</code>, <code>Dio.h</code></li>
+      <li><b>IPL</b>(IP Level Driver): 특정 MCU 주변장치(IP)에 딱 붙은 벤더 저수준 드라이버. 예: <code>Siul2_Port_Ip.h</code>, <code>Siul2_Dio_Ip.h</code></li>
+    </ul>
+  </section>
+
+  <!-- 03 Half -->
+  <section data-reveal>
+    <h2><span class="num">03</span>왜 13U인가: 포트를 반으로 나누는 IPL</h2>
+    <p class="prose">SIUL2는 32비트 GPIO 포트를 <b>16비트씩 반(Half)</b>으로 나눠 관리해요. PTA[15:0]은 <span class="xref" data-hl="#halves .half:nth-child(1)" data-c="ink">Low Half</span>, PTA[31:16]은 <span class="xref" data-hl="#halves .half:nth-child(2)">High Half(PTA_H_HALF)</span>예요. 그래서 IPL에는 "몇 번째 Half의 몇 번째 핀"으로 알려 줘야 해요. 끌어서 바꿔 보세요: <code>PTA<span class="tangle" data-bind="ptaN" data-label="PTA 핀 번호">29</span></code></p>
+    <div class="widget" id="halfLab">
+      <div class="row"><label for="ptaN">PTA</label><input type="range" id="ptaN" min="0" max="31" value="29"><span class="chip on" id="ptaLabel"></span></div>
+      <div class="halves" id="halves"></div>
+      <p class="calc" id="halfCalc"></p>
+    </div>
+    <div class="bubble"><div class="who"></div><div class="say"><b>낚시 1</b><code>Siul2_Dio_Ip_WritePin()</code>에 핀 번호 <code>29U</code>를 그대로 넣으면 감점이에요. <code>PTA_H_HALF</code>와 상대 번호 <code>13U</code>(29 − 16)를 같이 줘야 해요. MCAL의 Dio 설정도 같은 이유로 <b>Dio Port Id = 1</b>(PTA[31:16]), <b>Channel Id = 13</b>이에요.</div></div>
+  </section>
+
+  <!-- 04 Stepper -->
+  <section data-reveal>
+    <h2><span class="num">04</span>chap03 main.c 두 개를 한 줄씩</h2>
+    <div class="row case-row" role="group" aria-label="프로젝트 선택">
+      <button class="key" type="button" data-proj="ipl" aria-pressed="true">chap03_gpio_ipl</button>
+      <button class="key" type="button" data-proj="mcal" aria-pressed="false">chap03_gpio_mcal</button>
+    </div>
+    <div id="mainStepper"></div>
+    <div class="bubble"><div class="who"></div><div class="say"><b>Delay의 volatile</b><code>Delay(volatile uint32_t count)</code>에서 volatile이 빠지면, 컴파일러가 아무것도 안 하는 while 루프를 통째로 지워 버려요. 그러면 LED가 너무 빨리 바뀌어서 눈으로는 깜빡이는 게 안 보여요.</div></div>
+  </section>
+
+  <!-- 05 Port vs Dio -->
+  <section data-reveal>
+    <h2><span class="num">05</span>Port 모듈 vs Dio 모듈: 누구 담당?</h2>
+    <p class="prose">MCAL에서 핀 일은 두 모듈이 나눠 가져요. <span class="xref" data-hl="#binPort">Port</span>는 시작할 때 한 번 핀이 "어떤 핀인지"를 정하고, <span class="xref" data-hl="#binDio">Dio</span>는 실행 중에 이미 정해진 핀의 값을 읽고 써요. 아래 일을 하나씩 눌러서 담당을 맞혀 보세요.</p>
+    <div class="widget" id="sortLab">
+      <div class="sort-items" id="sortItems"></div>
+      <div class="sort-bins">
+        <div class="bin" id="binPort"><b>Port</b><small>Port_Init(NULL_PTR) · 시작 시 1회 · Port_Cfg.h, Port_PBcfg.c</small><div class="bin-list"></div></div>
+        <div class="bin" id="binDio"><b>Dio</b><small>Dio_WriteChannel(), Dio_FlipChannel() · 런타임 · Dio_Cfg.h</small><div class="bin-list"></div></div>
+      </div>
+      <p class="poll-result" id="sortOut"></p>
+    </div>
+    <div class="bubble"><div class="who"></div><div class="say"><b>낚시 2</b>"핀 방향(Output)과 Mux를 설정하는 함수는 Dio_Init()이다?" 오답이에요. 방향과 Mux는 <b>Port</b>(<code>Port_Init</code>)가 맡고, Dio는 High/Low 입출력만 해요.</div></div>
+  </section>
+
+  <!-- 06 핀이 바뀌면 -->
+  <section data-reveal>
+    <h2><span class="num">06</span>LED 핀이 바뀌면 어디를 고쳐야 할까</h2>
+    <p class="prose">회로가 바뀌어서 빨간 LED가 PTA29가 아닌 다른 핀으로 옮겨 갔다고 해 볼게요. 버튼을 누르면 방식마다 <b>손대야 하는 줄</b>이 빨갛게 표시돼요.</p>
+    <div class="widget" id="moveLab">
+      <div class="row"><button class="key" type="button" id="moveBtn" aria-pressed="false">LED 핀 옮기기</button></div>
+      <div class="move-cols">
+        <div><p class="widget-title">2장 Bare</p><pre id="mvBare"></pre><p class="mv-count" id="cBare"></p></div>
+        <div><p class="widget-title">3장 IPL</p><pre id="mvIpl"></pre><p class="mv-count" id="cIpl"></p></div>
+        <div><p class="widget-title">3장 MCAL</p><pre id="mvMcal"></pre><p class="mv-count" id="cMcal"></p></div>
+      </div>
+      <p class="hint" id="moveNote"></p>
+    </div>
+    <div class="bubble"><div class="who"></div><div class="say"><b>낚시 4</b>식별자 에러가 난다고 <code>Dio_Cfg.h</code> 같은 <b>생성 파일을 손으로 고치면</b> 안 돼요. 다음 코드 생성 때 전부 덮어써져요. 반드시 Config Tools에서 고치고 [Update Code]를 눌러요.</div></div>
+  </section>
+
+  <!-- 07 .text -->
+  <section data-reveal>
+    <h2><span class="num">07</span>빌드 크기(.text)만 보고 판단하면 안 되는 이유</h2>
+    <p class="prose">빌드하면 콘솔에 <code>text | data | bss | dec | hex | filename</code>이 나와요. text는 Flash에 들어가는 코드와 읽기 전용 데이터, data는 초기값이 있는 전역 변수, bss는 0으로 초기화될 전역 변수예요. 실제로 재 보면 <b>MCAL 쪽 .text가 IPL보다 커요.</b></p>
+    <div class="widget" id="sizeLab">
+      <p class="widget-title">.text 비교 <span class="badge extra"></span> 막대 길이는 크기 관계만 보여 주는 예시. 실제 숫자는 각자 빌드 결과로 확인</p>
+      <div class="bars">
+        <div class="bar-row"><span>IPL</span><div class="bar"><i class="core"></i></div></div>
+        <div class="bar-row"><span>MCAL</span><div class="bar"><i class="core"></i><i class="ext" data-part="trace" title="설정 추적성"></i><i class="ext" data-part="api" title="AUTOSAR 표준 API 레이어"></i><i class="ext" data-part="check" title="파라미터 유효성 검사"></i><i class="ext" data-part="asil" title="ASIL 기능안전 구조체"></i></div></div>
+      </div>
+      <div class="row parts" id="sizeParts"></div>
+      <p class="hint" id="sizeNote">MCAL에 더 붙은 조각을 눌러 보세요.</p>
+    </div>
+    <div class="bubble"><div class="who"></div><div class="say"><b>교수님 강조</b>.text 크기만으로 소프트웨어의 우열을 판단하면 안 돼요. 차량처럼 큰 시스템에서는 MCAL이 더해 주는 표준화와 안전성 이득이 이 크기보다 훨씬 커요.</div></div>
+    <h3>그런데 왜 자동차는 GPIO에도 MCAL을 쓸까 (서술형)</h3>
+    <ol class="prose">
+      <li><b>기능안전(ISO 26262 ASIL) 인증 비용 절감</b>: 한 번 검증·인증된 드라이버를 여러 차종과 ECU에 그대로 재사용해요.</li>
+      <li><b>설정과 코드의 분리</b>: 핀을 바꿔도 C 코드는 그대로 두고 Config Tools 설정만 고쳐서 사람 실수를 막아요.</li>
+      <li><b>OEM과 부품사(Tier 1) 사이의 표준화</b>: 다른 팀이 만든 모듈을 합쳐도 인터페이스가 어긋나지 않아요.</li>
+    </ol>
+  </section>
+
+  <!-- 08 설정 함정 -->
+  <section data-reveal>
+    <h2><span class="num">08</span>설정할 때 빠지기 쉬운 함정</h2>
+    <div class="bubble"><div class="who"></div><div class="say"><b>낚시 3</b>MCAL 프로젝트에서 Peripherals에 <code>Port</code>와 <code>Dio</code>를 추가할 때, Drivers 밑에 있던 <code>Siul2_Port</code>를 <b>꼭 지워야</b> 충돌이 안 나요.</div></div>
+    <div class="bubble"><div class="who"></div><div class="say"><b>Dio_FlipChannel 링크 에러</b><code>(void)Dio_FlipChannel(LED_CHANNEL);</code>은 현재 값을 읽어서 반대로 바꿔 줘요. 그런데 Peripherals › Dio에서 <b>DioFlipChannelApi</b>를 true(STD_ON)로 켜고 [Update Code]를 하지 않으면 미정의 심볼 링크 에러가 나요. 실습에서 <code>Dio_WriteChannel</code>을 쓰는 건 LOW/HIGH가 코드에 그대로 보여서 배우고 디버깅하기 쉬워서예요.</div></div>
+    <p class="next-link">← 앞 주: <a href="w2-gpio-bare.html">2주차 GPIO bare</a> · 다음 주: <a href="w4-i2c-lcd.html">4주차 I2C와 LCD</a> →</p>
+  </section>
+
+  <section data-reveal>
+    <h2><span class="num">09</span>체크 퀴즈</h2>
+    <div class="widget" id="quiz"></div>
+  </section>
+</main>
+
+<script type="module" src="../assets/js/core.js"></script>
+<script type="module" src="../assets/js/stepper.js"></script>
+<script type="module" src="../assets/js/quiz.js"></script>
+<script type="module" src="w3.js"></script>
+</body>
+</html>

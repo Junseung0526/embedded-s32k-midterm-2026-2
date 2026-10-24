@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>임베디드 시각화 노트</title>
+<link rel="stylesheet" href="assets/css/base.css">
+<link rel="stylesheet" href="hub.css">
+</head>
+<body>
+<header class="topbar">
+  <span>embedded-visual / 2026-2</span>
+  <span>S32K312 · 중간고사</span>
+</header>
+<main class="page">
+  <section class="hero">
+    <div class="kicker">로컬 전용 · 노션 「시험 대비 정리 › 임베디드」 기준</div>
+    <h1>임베디드 시각화 노트</h1>
+    <p class="lede">보드의 부품(<span class="xref" data-hl="#pUart">OpenSDA</span>, <span class="xref" data-hl="#pLed">D13 LED</span>, <span class="xref" data-hl="#pLcd">LCD</span>)을 누르면 그 부품을 다룬 주차로 들어가요. 버튼 <span class="xref" data-hl="#pBtn">SW5</span>는 직접 눌러 보세요. 문제 풀이는 exam-prep 앱에서 해요.</p>
+  </section>
+
+  <div class="hub">
+    <figure class="board-wrap">
+      <!-- 실제 배치가 아니라 이 수업에서 쓰는 부품만 모은 개념도 -->
+      <svg id="board" viewBox="0 0 780 440" role="group" aria-label="S32K312EVB 개념도">
+        <defs>
+          <filter id="glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="6"/></filter>
+        </defs>
+
+        <!-- 기판 -->
+        <rect class="pcb" x="24" y="24" width="520" height="392" rx="18"/>
+        <circle class="hole" cx="48" cy="48" r="7"/><circle class="hole" cx="520" cy="48" r="7"/>
+        <circle class="hole" cx="48" cy="392" r="7"/><circle class="hole" cx="520" cy="392" r="7"/>
+        <text class="silk" x="70" y="404">s32k312evb-q172 · 개념도</text>
+
+        <!-- 배선 (MCU에서 각 부품으로) -->
+        <path class="trace data" d="M96 104 H180 V175.5 H232"/>
+        <path class="trace" d="M368 190.5 H430 V122"/>
+        <path class="trace" d="M368 265.5 H430 V300"/>
+        <path class="trace data" d="M368 220.5 H500"/>
+        <path class="trace clk" d="M368 235.5 H500"/>
+        <path id="irqPath" class="irq" d="M430 300 V265.5 H368"/>
+        <text class="silk" x="110" y="96">lpuart6 · pta16/15</text>
+        <text class="silk" x="378" y="184">pta29</text>
+        <text class="silk" x="378" y="282">ptb26</text>
+
+        <!-- MCU -->
+        <g class="mcu" id="mcu">
+          <g class="mcu-pins"></g>
+          <rect x="232" y="160" width="136" height="136" rx="6"/>
+          <circle cx="248" cy="176" r="4" class="dot"/>
+          <text x="300" y="224" text-anchor="middle" class="chip-t">S32K312</text>
+          <text x="300" y="244" text-anchor="middle" class="chip-s">cortex-m7</text>
+        </g>
+
+        <!-- OpenSDA / UART : w1 -->
+        <a class="part" id="pUart" href="weeks/w1-uart.html" data-week="w1" aria-label="OpenSDA USB 커넥터, 1주차 UART로 이동">
+          <rect class="metal" x="8" y="80" width="88" height="48" rx="4"/>
+          <rect class="metal-in" x="20" y="92" width="64" height="24" rx="2"/>
+          <text class="lbl" x="52" y="150" text-anchor="middle">opensda · usb</text>
+          <text class="wk" x="52" y="166" text-anchor="middle">w1 uart</text>
+        </a>
+
+        <!-- D13 LED : w2 -->
+        <a class="part" id="pLed" href="weeks/w2-gpio-bare.html" data-week="w2" aria-label="D13 빨간 LED, 2주차 GPIO로 이동">
+          <circle class="led-glow" cx="430" cy="110" r="16" filter="url(#glow)"/>
+          <rect class="led-body" x="418" y="100" width="24" height="20" rx="3"/>
+          <text class="lbl" x="458" y="106">d13</text>
+          <text class="wk" x="458" y="121">w2 gpio</text>
+        </a>
+
+        <!-- USER_SW0 버튼 : 허브 안 애니메이션 -->
+        <g class="part btn" id="pBtn" role="button" tabindex="0" aria-label="SW5 USER_SW0 버튼 누르기, 인터럽트 애니메이션">
+          <rect class="btn-base" x="406" y="300" width="48" height="48" rx="6"/>
+          <circle class="btn-cap" cx="430" cy="324" r="15"/>
+          <text class="lbl" x="466" y="320">sw5</text>
+          <text class="lbl" x="466" y="334">user_sw0</text>
+        </g>
+        <a class="part link" id="pIrq" href="weeks/w5-interrupt.html" data-week="w5" aria-label="5주차 인터럽트로 이동">
+          <text class="wk" x="466" y="356">인터럽트 →</text>
+        </a>
+
+        <!-- 헤더 핀 -->
+        <g class="header">
+          <rect x="500" y="190" width="28" height="68" rx="3"/>
+          <circle cx="514" cy="204" r="3"/><circle cx="514" cy="219" r="3"/><circle cx="514" cy="234" r="3"/><circle cx="514" cy="249" r="3"/>
+        </g>
+
+        <!-- I2C 선 -->
+        <path class="wire data" d="M528 219 C 570 219, 560 180, 600 180"/>
+        <path class="wire clk" d="M528 234 C 575 234, 565 196, 600 196"/>
+        <path class="wire pwr" d="M528 204 C 565 204, 560 164, 600 164"/>
+        <path class="wire gnd" d="M528 249 C 580 249, 570 212, 600 212"/>
+        <text class="silk" x="462" y="280">ptc6 sda · ptc7 scl</text>
+
+        <!-- LCD : w4 -->
+        <a class="part" id="pLcd" href="weeks/w4-i2c-lcd.html" data-week="w4" aria-label="1602 LCD, 4주차 I2C로 이동">
+          <rect class="lcd-pcb" x="596" y="140" width="176" height="96" rx="6"/>
+          <rect class="lcd-glass" x="608" y="152" width="152" height="56" rx="2"/>
+          <text class="lcd-t" x="616" y="174" id="lcdRow0">Hello S32K3</text>
+          <text class="lcd-t" x="616" y="196" id="lcdRow1">Count: 0000</text>
+          <text class="lbl" x="684" y="256" text-anchor="middle">1602 lcd · pcf8574</text>
+          <text class="wk" x="684" y="272" text-anchor="middle">w4 i2c</text>
+        </a>
+      </svg>
+      <figcaption class="status" id="status" aria-live="polite">부품을 눌러 보세요. 마우스를 올리면 어느 주차인지 먼저 알려 줘요.</figcaption>
+    </figure>
+
+    <aside class="side">
+      <a class="resume" id="resume" href="#" hidden><small>이어서 보기</small><b></b></a>
+      <a class="hint-card" href="weeks/hints.html">
+        <span class="no">HINT</span>
+        <b>교수님 힌트 1 · 2</b>
+        <small>비트 연산 6종, 마스킹 4공식, 포인터 캐스팅, 구조체 오프셋, volatile</small>
+        <span class="go">열기 →</span>
+      </a>
+      <dl class="map">
+        <dt>opensda · usb</dt><dd>1주차 UART</dd>
+        <dt>d13 led</dt><dd>2주차 GPIO <small>(→ 3주차 IPL/MCAL)</small></dd>
+        <dt>1602 lcd</dt><dd>4주차 I2C</dd>
+        <dt>sw5 버튼</dt><dd>여기서 인터럽트 재생</dd>
+        <dt>인터럽트 →</dt><dd>5주차 인터럽트</dd>
+      </dl>
+    </aside>
+  </div>
+
+  <h2 class="toc-title">전체 목록</h2>
+  <nav class="toc" aria-label="페이지 목록">
+    <a href="weeks/hints.html"><span class="no">HINT</span><span class="t">교수님 힌트 1 · 2<small>비트 연산 6종, 마스킹 4공식, 포인터 캐스팅, 구조체 오프셋, volatile</small></span><span class="go">열기 →</span></a>
+    <a href="weeks/w1-uart.html"><span class="no">W1</span><span class="t">S32K3 개요와 UART<small>임베디드 4대 특성, 부팅·PLL Lock, 메모리 맵, 8-N-1 파형, printf → LPUART6 → VCOM, _write()</small></span><span class="go">열기 →</span></a>
+    <a href="weeks/w2-gpio-bare.html"><span class="no">W2</span><span class="t">GPIO, 주소 직접 접근<small>Memory-Mapped I/O, MSCR(OBE·SSS), GPDO 역순 배치, chap02_gpio_bare</small></span><span class="go">열기 →</span></a>
+    <a href="weeks/w3-ipl-mcal.html"><span class="no">W3</span><span class="t">GPIO, IPL과 MCAL<small>추상화 계층, PTA_H_HALF와 13U, Port vs Dio, 기호 이름, .text 크기</small></span><span class="go">열기 →</span></a>
+    <a href="weeks/w4-i2c-lcd.html"><span class="no">W4</span><span class="t">I2C와 캐릭터 LCD<small>오픈 드레인, I2C 프레임 파형, 스캐너, PCF8574, 4비트 전송, DDRAM, IPL↔MCAL</small></span><span class="go">열기 →</span></a>
+    <a href="weeks/w5-interrupt.html"><span class="no">W5</span><span class="t">인터럽트 처리<small>폴링 vs 인터럽트, 벡터 테이블, EIRQ 라우팅, 스택 PUSH/POP, 디바운싱</small></span><span class="go">열기 →</span></a>
+  </nav>
+</main>
+<script type="module" src="assets/js/core.js"></script>
+<script type="module" src="hub.js"></script>
+</body>
+</html>
