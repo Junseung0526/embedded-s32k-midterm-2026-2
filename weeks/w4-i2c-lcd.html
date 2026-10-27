@@ -91,6 +91,10 @@
   <section data-reveal>
     <h2><span class="num">05</span>'A' 한 글자가 LCD에 들어가기까지</h2>
     <p class="prose"><code>Lcd1602_Putc('A')</code>는 <code>WriteByte(0x41, 데이터)</code>가 돼요. <span class="xref" data-hl="#nibbleStepper .nibs span:nth-of-type(1)">상위 니블(4)</span>을 먼저, <span class="xref" data-hl="#nibbleStepper .nibs span:nth-of-type(2)">하위 니블(1)</span>을 나중에 보내고, 니블마다 <b>E를 1로 올렸다가 0으로 떨어뜨리는 순간</b> LCD가 값을 잡아요(래치).</p>
+    <div class="row case-row" role="group" aria-label="프로젝트 선택">
+      <button class="key" type="button" data-proj="mcal" aria-pressed="true">chap04_i2c_lcd_mcal</button>
+      <button class="key" type="button" data-proj="ipl" aria-pressed="false">chap04_i2c_lcd_ipl</button>
+    </div>
     <div id="nibbleStepper"></div>
     <div class="bubble"><div class="who"></div><div class="say"><b>낚시 2</b>LCD는 E를 0→1로 올릴 때가 아니라 1→0으로 <b>떨어뜨리는 하강 에지</b>에서 데이터를 래치해요. 그래서 글자 하나에 I2C 쓰기가 최소 4번(니블 2개 × E 1, 0) 필요해요.</div></div>
   </section>
@@ -117,8 +121,8 @@
     <p class="prose">lcd1602 모듈은 층을 나눠 놨어요. I2C로 실제로 보내는 일은 <span class="xref" data-hl="#bridge">I2c_Lcd1602_Write()</span> 하나에만 있어서, 이 함수 속만 IPL에서 MCAL로 바꾸면 위층 코드는 하나도 안 고쳐도 돼요.</p>
     <div class="widget" id="layerLab">
       <div class="row" role="group" aria-label="드라이버 선택">
-        <button class="key" type="button" data-drv="ipl" aria-pressed="true">IPL (Lpi2c_Ip)</button>
-        <button class="key" type="button" data-drv="mcal" aria-pressed="false">MCAL (CDD_I2c)</button>
+        <button class="key" type="button" data-proj="mcal" aria-pressed="true">MCAL (CDD_I2c)</button>
+        <button class="key" type="button" data-proj="ipl" aria-pressed="false">IPL (Lpi2c_Ip)</button>
       </div>
       <div class="layers">
         <div class="layer">main.c<small>Lcd1602_Puts, 카운터 포맷</small></div>
@@ -129,6 +133,20 @@
         <div class="layer hw">LPI2C1 · PTC6(SDA) / PTC7(SCL) · 100 kHz</div>
       </div>
       <pre id="drvCode"></pre>
+      <h3>초기화 순서 (main 앞부분)</h3>
+      <div data-pane="mcal"><pre data-code>
+Mcu_Init(NULL_PTR);
+Mcu_InitClock(/* 생성된 clock 설정 */);
+Mcu_DistributePllClock();
+Mcu_SetMode(/* 생성된 mode 설정 */);
+Port_Init(NULL_PTR);     /* PTC6/PTC7 = LPI2C1 SDA/SCL */
+I2c_Init(NULL_PTR);
+Lcd1602_Init(LCD_ADDR);</pre></div>
+      <div data-pane="ipl" hidden><pre data-code>
+Clock_Ip_Init(/* 생성된 clock 설정 */);
+Siul2_Port_Ip_Init(/* 생성된 pin 설정 */);   /* PTC6/PTC7 = LPI2C1 SDA/SCL */
+Lpi2c_Ip_MasterInit(1U, &amp;I2c_Lpi2cMaster_HwChannel1_Channel0);
+Lcd1602_Init(LCD_ADDR);</pre></div>
       <div class="table-wrap">
         <table>
           <thead><tr><th>하는 일</th><th>IPL (Lpi2c_Ip)</th><th>MCAL (CDD_I2c)</th></tr></thead>

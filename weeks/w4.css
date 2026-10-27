@@ -63,3 +63,5 @@ svg.frame .lane { fill: var(--ink-2); font-size: 12px; }
 .layer.drv { background: var(--panel-2); transition: background .3s; }
 .layer.drv.flip { animation: flash .6s ease-out; }
 .layer.hw { color: var(--ink-2); }
+
+.case-row { margin-top: 12px; }

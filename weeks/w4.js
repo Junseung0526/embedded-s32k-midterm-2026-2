@@ -1,5 +1,6 @@
 // w4 페이지: 오픈 드레인 버스, I2C 프레임 파형, 스캐너, PCF8574 매핑, 4비트 전송 Stepper, DDRAM, 계층 교체, 퀴즈
 (function () {
+  const PROJ_HOOKS = []; // MCAL/IPL 전환 버튼을 눌렀을 때 다시 그릴 곳들
   const { h } = EV;
   const $ = (id) => document.getElementById(id);
   const hex2 = (v) => EV.hex(v, 2);
@@ -192,8 +193,14 @@
     show();
   }
 
-  /* ---------- 05. 4비트 전송 Stepper ---------- */
+  /* ---------- 05. 4비트 전송 Stepper (MCAL / IPL 번갈아 보기) ---------- */
   {
+    const BRIDGE = {
+      ipl: { call: "(void)Lpi2c_Ip_MasterSendDataBlocking(1U, &tx, 1U, TRUE, 100U);", name: "Lpi2c_Ip_MasterSendDataBlocking()" },
+      mcal: { call: "(void)I2cMcal_SyncWrite(g_lcd_addr, &tx, 1U);  // 속: I2c_SyncTransmit(0U, &request)", name: "I2c_SyncTransmit()" },
+    };
+    function build(key) {
+    const drv = BRIDGE[key];
     const side = h("div");
     const pcf = EV.register(side.appendChild(h("div")), { name: "PCF8574 핀 (I2C로 보낸 값)", bits: 8, fields: PCF_FIELDS, stateKey: "PCF" });
     const val = EV.register(side.appendChild(h("div")), { name: "value (지역 변수)", bits: 8, fields: PCF_FIELDS, stateKey: "VAL" });
@@ -224,7 +231,10 @@
 
     const tx = (s, byte, e, extra = {}) => ({ ...s, regs: { ...s.regs, PCF: byte }, eHist: [...s.eHist, e], writes: s.writes + 1, latch: false, ...extra });
 
-    EV.stepper($("nibbleStepper"), {
+    // 같은 요소에 Stepper를 두 번 만들면 키 핸들러가 쌓이니까 새 요소로 바꿔 끼운다
+    const fresh = h("div", { id: "nibbleStepper" });
+    $("nibbleStepper").replaceWith(fresh);
+    EV.stepper(fresh, {
       title: "Lcd1602_Putc('A')",
       code: `
 static void Lcd1602_PulseEnable(uint8_t value)
@@ -252,6 +262,12 @@ static void Lcd1602_WriteByte(uint8_t value, uint8_t isData)
 void Lcd1602_Putc(char c)
 {
     Lcd1602_WriteByte((uint8_t)c, 1U);
+}
+
+static void I2c_Lcd1602_Write(uint8_t value)
+{
+    uint8_t tx = value;
+    ${drv.call}
 }`,
       initial: { regs: { PCF: LCD_BACKLIGHT, VAL: 0 }, eHist: [], nibs: [], writes: 0, latch: false, ch: " " },
       intro: "백라이트만 켜진 상태(0x08)에서 시작해요. 아래쪽 Putc부터 위로 따라 올라가요.",
@@ -262,15 +278,17 @@ void Lcd1602_Putc(char c)
         { line: 18, note: "상위 니블부터 보내요. 0x41을 그대로 넘기고, 안에서 0xF0 마스크로 위 4비트(0100)만 남길 거예요.", apply: (s) => s },
         { line: 11, note: "0x41 & 0xF0 = 0x40, 여기에 백라이트 0x08을 OR → 0x48. 데이터 비트는 P7~P4(DB7~DB4) 자리에 그대로 있어요.", apply: (s) => ({ ...s, regs: { ...s.regs, VAL: (0x41 & LCD_DATA_MASK) | LCD_BACKLIGHT } }) },
         { line: 12, note: "데이터라서 RS = 1 → 0x49. (명령이었다면 RS = 0)", apply: (s) => ({ ...s, regs: { ...s.regs, VAL: s.regs.VAL | LCD_RS } }) },
-        { line: 3, note: "I2C 쓰기 ①: E를 켠 0x4D를 보내요. PCF8574의 P2(E)가 1이 돼요. LCD는 아직 안 읽어요.", apply: (s) => tx(s, s.regs.VAL | LCD_E, 1), predict: { q: "value(0x49)에 E(0x04)를 켜서 보내는 바이트는?", choices: ["0x49", "0x4D", "0x45", "0x4C"], answer: 1 } },
-        { line: 5, note: "I2C 쓰기 ②: E만 끈 0x49. E가 1 → 0으로 떨어지는 순간 LCD가 DB7~DB4의 0100(4)을 래치해요!", apply: (s) => tx(s, s.regs.VAL & ~LCD_E, 0, { latch: true, nibs: ["4"] }) },
+        { line: [3, 31], note: `I2C 쓰기 ①: E를 켠 0x4D를 보내요. 실제로는 I2c_Lcd1602_Write가 ${drv.name}로 한 바이트를 내보내요. PCF8574의 P2(E)가 1이 돼요. LCD는 아직 안 읽어요.`, apply: (s) => tx(s, s.regs.VAL | LCD_E, 1), predict: { q: "value(0x49)에 E(0x04)를 켜서 보내는 바이트는?", choices: ["0x49", "0x4D", "0x45", "0x4C"], answer: 1 } },
+        { line: [5, 31], note: `I2C 쓰기 ②: E만 끈 0x49 (${drv.name}). E가 1 → 0으로 떨어지는 순간 LCD가 DB7~DB4의 0100(4)을 래치해요!`, apply: (s) => tx(s, s.regs.VAL & ~LCD_E, 0, { latch: true, nibs: ["4"] }) },
         { line: 19, note: "하위 니블. 0x41 << 4 = 0x410인데 uint8_t로 잘려서 0x10. 아래 4비트(0001)가 위 자리로 올라왔어요.", apply: (s) => ({ ...s, latch: false }) },
         { line: [11, 12], note: "같은 과정: 0x10 & 0xF0 = 0x10, 백라이트와 RS를 더해 0x19.", apply: (s) => ({ ...s, regs: { ...s.regs, VAL: (0x10 & LCD_DATA_MASK) | LCD_BACKLIGHT | LCD_RS } }) },
-        { line: 3, note: "I2C 쓰기 ③: E를 켠 0x1D.", apply: (s) => tx(s, s.regs.VAL | LCD_E, 1) },
-        { line: 5, note: "I2C 쓰기 ④: E를 끈 0x19. 두 번째 래치로 LCD가 4와 1을 합쳐 0x41 = 'A'를 DDRAM에 쓰고 화면에 띄워요.", apply: (s) => tx(s, s.regs.VAL & ~LCD_E, 0, { latch: true, nibs: ["4", "1"], ch: "A" }) },
+        { line: [3, 31], note: `I2C 쓰기 ③: E를 켠 0x1D (${drv.name}).`, apply: (s) => tx(s, s.regs.VAL | LCD_E, 1) },
+        { line: [5, 31], note: `I2C 쓰기 ④: E를 끈 0x19 (${drv.name}). 두 번째 래치로 LCD가 4와 1을 합쳐 0x41 = 'A'를 DDRAM에 쓰고 화면에 띄워요.`, apply: (s) => tx(s, s.regs.VAL & ~LCD_E, 0, { latch: true, nibs: ["4", "1"], ch: "A" }) },
         { line: 20, note: "LCD가 처리할 시간을 주고 끝. 글자 하나에 I2C 쓰기가 4번 들었어요.", apply: (s) => ({ ...s, latch: false }) },
       ],
     });
+    }
+    PROJ_HOOKS.push(build);
   }
 
   /* ---------- 06. DDRAM ---------- */
@@ -317,13 +335,12 @@ static void I2c_Lcd1602_Write(uint8_t value)
       },
     };
     function pick(key) {
-      document.querySelectorAll("#layerLab [data-drv]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.drv === key));
       $("drvBox").textContent = DRV[key].box;
       EV.pulse($("drvBox"), "flip");
       EV.codeBlock($("drvCode"), DRV[key].code);
     }
-    document.querySelectorAll("#layerLab [data-drv]").forEach((b) => b.addEventListener("click", () => pick(b.dataset.drv)));
-    pick("ipl");
+    PROJ_HOOKS.push(pick);
+    EV.projTabs("[data-proj]", (key) => PROJ_HOOKS.forEach((f) => f(key)));
   }
 
   /* ---------- 08. 퀴즈 ---------- */

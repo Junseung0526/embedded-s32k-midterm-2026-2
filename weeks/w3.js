@@ -172,7 +172,7 @@ int main(void)
     }
     const btns = [...document.querySelectorAll(".case-row [data-proj]")];
     btns.forEach((b) => b.addEventListener("click", () => (press(btns, b), build(b.dataset.proj))));
-    build("ipl");
+    build("mcal");
   }
 
   /* ---------- 05. Port vs Dio 분류 ---------- */

@@ -239,6 +239,34 @@
         <li>멈추면 MA 값이 HW 값보다 덜 흔들리고, 빠르게 돌리면 MA 값이 HW 값을 조금 늦게 따라가요.</li>
       </ul>
     </div>
+    <h3>main() 초기화</h3>
+    <div data-pane="mcal"><pre data-code>
+/* mcu, i2c 관련 초기화는 생략 */
+Platform_Init(NULL_PTR);
+Port_Init(NULL_PTR);
+Adc_Init(NULL_PTR);
+Lcd1602_Init(LCD_ADDR);
+AdcFilter_Init(&amp;AdcFilter);
+
+/* 결과 버퍼 등록 */
+(void)Adc_SetupResultBuffer(AdcGroup_POT, AdcResultBuffer);
+
+/* 콜백 허용: Adc_Init() 직후에는 notification이 꺼져 있다 */
+Adc_EnableGroupNotification(AdcGroup_POT);</pre></div>
+    <div data-pane="ipl" hidden><pre data-code>
+status = (StatusType)Adc_Sar_Ip_Init(ADCHWUNIT_0_INSTANCE, &amp;AdcHwUnit_0);
+while (status != E_OK);
+
+/* 보드 전원 불안정을 고려해 보정을 여러 번 시도 */
+for (Index = 0; Index &lt;= 5; Index++)
+{
+    status = (StatusType)Adc_Sar_Ip_DoCalibration(ADCHWUNIT_0_INSTANCE);
+    if (status == E_OK) { break; }
+}
+
+Lpi2c_Ip_MasterInit(1U, &amp;I2c_Lpi2cMaster_HwChannel1_Channel0);
+Lcd1602_Init(LCD_ADDR);
+AdcFilter_Init(&amp;AdcFilter);</pre></div>
     <h3>남길 스크린샷</h3>
     <ul class="prose rules">
       <li>Pins 탭에서 PTA11 ADC 입력이 선택된 화면</li>

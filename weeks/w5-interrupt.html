@@ -163,6 +163,31 @@ void UserSw0_Callback(void)
     <div class="order" data-order="Clock_Ip_Init|Siul2_Port_Ip_Init|Siul2_Icu_Ip_Init|EnableInterrupt|EnableNotification|IntCtrl_Ip_Init|Lcd1602_Init"></div>
     <p class="order-label">MCAL</p>
     <div class="order" data-order="Mcu_Init|Mcu_InitClock|Mcu_DistributePllClock|Mcu_SetMode|Port_Init|I2c_Init|Platform_Init|Icu_Init|Icu_EnableNotification|Icu_EnableEdgeDetection|Lcd1602_Init"></div>
+    <h3>초기화 코드</h3>
+    <div class="row case-row" role="group" aria-label="프로젝트 선택">
+      <button class="key" type="button" data-proj="mcal" aria-pressed="true">chap05_interrupt_button_mcal</button>
+      <button class="key" type="button" data-proj="ipl" aria-pressed="false">chap05_interrupt_button_ipl</button>
+    </div>
+    <div data-pane="mcal"><pre data-code>
+Mcu_Init(NULL_PTR);
+Mcu_InitClock(/* 생성된 clock 설정 */);
+Mcu_DistributePllClock();
+Mcu_SetMode(/* 생성된 mode 설정 */);
+Port_Init(NULL_PTR);
+I2c_Init(NULL_PTR);
+Platform_Init(NULL_PTR);                                   /* 인터럽트 컨트롤러 */
+Icu_Init(NULL_PTR);
+Icu_EnableNotification(IcuConf_IcuChannel_USER_SW0);       /* 알림 허용 */
+Icu_EnableEdgeDetection(IcuConf_IcuChannel_USER_SW0);      /* 에지 감지(인터럽트) 허용 */
+Lcd1602_Init(LCD_ADDR);</pre></div>
+    <div data-pane="ipl" hidden><pre data-code>
+Clock_Ip_Init(/* 생성된 clock 설정 */);
+Siul2_Port_Ip_Init(/* 생성된 pin 설정 */);
+Siul2_Icu_Ip_Init(0U, &amp;Siul2_Icu_Ip_0_Config_PB);
+Siul2_Icu_Ip_EnableInterrupt(0U, 13U);                     /* 인터럽트 허용 */
+Siul2_Icu_Ip_EnableNotification(0U, 13U);                  /* 알림 허용 */
+IntCtrl_Ip_Init(&amp;IntCtrlConfig_0);                          /* 인터럽트 컨트롤러 */
+Lcd1602_Init(LCD_ADDR);</pre></div>
     <div class="bubble"><div class="who"></div><div class="say"><b>낚시 6</b><code>Icu_Init()</code>만 부르면 인터럽트가 들어온다? 아니에요. <code>Icu_EnableEdgeDetection()</code>과 <code>Icu_EnableNotification()</code>까지 불러야 콜백이 호출돼요. IPL도 마찬가지로 Init 뒤에 EnableInterrupt, EnableNotification이 필요해요.</div></div>
   </section>
 
