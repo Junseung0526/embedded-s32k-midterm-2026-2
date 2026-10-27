@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>6주차 ADC · 임베디드</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect x=%277%27 y=%277%27 width=%2718%27 height=%2718%27 rx=%273%27 fill=%27%232B2C29%27/%3E%3Cpath d=%27M3 12h4M3 20h4M25 12h4M25 20h4M12 3v4M20 3v4M12 25v4M20 25v4%27 stroke=%27%238E8C85%27 stroke-width=%272%27/%3E%3Ccircle cx=%2721%27 cy=%2711%27 r=%273%27 fill=%27%23E8412C%27/%3E%3C/svg%3E">
 <link rel="stylesheet" href="../assets/css/base.css">
 <link rel="stylesheet" href="w6.css">
 </head>
@@ -18,6 +19,10 @@
     <div class="kicker">6주차 · chap06_adc_ipl / _mcal</div>
     <h1>가변저항을 돌렸을 때<br>숫자가 LCD에 뜨기까지</h1>
     <p class="lede">ADC_POT0(PTA11)의 전압이 ADC1_S10을 거쳐 정수 코드가 되고, 하드웨어 평균과 이동 평균을 지나 LCD에 HW · MA · 전압으로 찍혀요. 하나씩 만져 보면서 따라가요.</p>
+  </section>
+
+  <section class="part-head" data-reveal>
+    <div class="kicker">제1부 · 이론</div>
   </section>
 
   <!-- 01 양자화 -->
@@ -118,29 +123,153 @@
     <div class="bubble"><div class="who"></div><div class="say"><b>Vref도 확인</b>교재 계산 예제는 5000 mV를 기준으로 하지만, 실제 Vref는 보드 설정과 전원 상태에 따라 달라요. 보고서에는 실제 설정이나 측정값을 적어요.</div></div>
   </section>
 
-  <!-- 07 IPL vs MCAL -->
+  <!-- 07 실습 준비 -->
+  <section class="part-head" data-reveal>
+    <div class="kicker">제2부 · 실습</div>
+    <p class="prose">ADC_POT0을 읽어 하드웨어 평균, 이동 평균, 전압을 LCD에 표시해요. 수업 실습은 주로 MCAL로 하니까 MCAL이 먼저 보여요. 버튼으로 IPL 프로젝트와 번갈아 볼 수 있어요.</p>
+  </section>
+
   <section data-reveal>
-    <h2><span class="num">07</span>IPL vs MCAL: 같은 읽기, 다른 길</h2>
-    <p class="prose">실습 A(IPL)는 <code>Adc_Sar_Ip</code>를 직접 쓰고 완료 flag를 <b>폴링</b>해요. 그래서 ADC 인터럽트와 notification은 필요 없어요. 실습 B(MCAL)는 group을 만들고 완료를 <b>콜백</b>으로 받아요. 두 방식은 섞지 않아요. MCAL의 <code>AdcGroup_POT</code>나 <code>Adc_*</code> API를 IPL 프로젝트에 넣으면 안 돼요.</p>
+    <h2><span class="num">07</span>실습 준비: 목표와 설정</h2>
+    <ul class="prose rules">
+      <li>ADC_POT0을 <b>ADC1_S10</b>으로 읽어요 (하드웨어 평균 8회).</li>
+      <li>하드웨어 평균값에 소프트웨어 <b>N=8 이동 평균</b>을 적용해요.</li>
+      <li>하드웨어 평균값(HW)과 이동 평균값(MA)을 LCD에 함께 표시하고, 이동 평균값을 전압으로 환산해 표시해요.</li>
+    </ul>
+    <p class="prose">S32K312에는 ADC0과 ADC1 두 개가 있고, 각 채널은 특정 핀에 매핑돼요. 변환 모드는 단발·연속·트리거(eMIOS · BCTU)가 있고 이 장은 <b>단발(One-shot)</b>을 써요. RTD Adc 드라이버로 그룹을 시작하고 결과를 읽어요.</p>
+    <div class="table-wrap"><table><thead><tr><th>항목</th><th>값</th></tr></thead><tbody><tr><td>보드</td><td>S32K312EVB-Q172</td></tr><tr><td>가변저항</td><td>ADC_POT0 / PTA11 (160번 핀)</td></tr><tr><td>ADC 입력 / instance</td><td>PTA11 = ADC1_S10 / ADC1</td></tr><tr><td>변환 방식 / 분해능</td><td>Software triggered one-shot / 12-bit</td></tr><tr><td>RTD ADC driver</td><td><code>Adc_TS_T40D34M70I1R0</code></td></tr><tr><td>도구 버전</td><td>S32DS 3.6.7 · S32K3 RTD 7.0.1 · GCC 10.2 · PEmicro 12.7.0 · FreeRTOS 7.0.0</td></tr></tbody></table></div>
+    <div class="row case-row" role="group" aria-label="프로젝트 선택">
+      <button class="key" type="button" data-proj="mcal" aria-pressed="true">chap06_adc_mcal</button>
+      <button class="key" type="button" data-proj="ipl" aria-pressed="false">chap06_adc_ipl</button>
+    </div>
+    <div data-pane="mcal">
+      <h3>프로젝트 파일 (MCAL)</h3>
+      <pre class="tree">chap06_adc_mcal/
+|-- chap06_adc_mcal.mex                [생성]
+|-- generate/include/
+|   |-- Adc_PBcfg.h / I2c_PBcfg.h      [생성]
+|   |-- Mcu_PBcfg.h / Platform_Cfg.h   [생성]
+|   `-- Port_PBcfg.h                   [생성]
+|-- generate/src/ (같은 이름의 .c)     [생성]
+|-- src/
+|   |-- adc_filter.h / adc_filter.c    [IPL 프로젝트에서 복사]
+|   |-- lcd1602.h / lcd1602.c          [4장에서 복사]
+|   `-- main.c                         [작성]
+`-- reports/chap06_adc_mcal_check.md</pre>
+      <h3>Config Tools 순서</h3>
+      <ol class="prose rules">
+        <li><b>Pins</b> 탭에서 PTA11을 ADC 입력으로, PTC6/PTC7을 LPI2C1로 설정해요.</li>
+        <li><b>Peripherals</b>에 Mcu, Port, Adc, Platform, I2c를 추가해요. Mcu와 I2c 설정은 4~5장과 같아요.</li>
+        <li>ADC1의 normal group을 만들고 symbolic name을 <code>AdcGroup_POT</code>, trigger는 Software, mode는 One-shot으로 해요.</li>
+        <li>hardware unit의 Conversion resolution을 <code>RESOLUTION_12</code>로, General의 Adc Result Alignment가 <code>ADC_ALIGN_RIGHT</code>인지 확인해요.</li>
+        <li>ADC1 hardware unit에서 하드웨어 평균 8회를 켜요.</li>
+        <li>콜백: <code>Adc Normal Interrupt Enable = true</code>, <code>Adc Group Notification = Adc1_Callback</code>, Platform에서 ADC1 interrupt와 RTD handler를 등록해요.</li>
+        <li><b>Update Code</b> 후 group ID 심볼과 <code>Adc1_Callback</code> 선언을 확인해요.</li>
+      </ol>
+      <h3>Adc 설정: 유닛 · 채널 · 분해능</h3>
+      <div class="table-wrap"><table><thead><tr><th>항목</th><th>설정값</th><th>설명</th></tr></thead><tbody><tr><td>ConfigTimeSupport</td><td><code>VARIANT-PRE-COMPILE</code></td><td><code>Adc_Init()</code> 간소화</td></tr><tr><td>AdcHwConfiguration &gt; Adc Hardware Unit</td><td><code>ADC1</code></td><td>사용할 하드웨어 유닛</td></tr><tr><td>AdcConfigSet &gt; AdcHwUnit &gt; Adc Hardware Unit</td><td><code>ADC1</code></td><td>사용할 ADC 유닛 선택</td></tr><tr><td>… &gt; Conversion resolution</td><td><code>RESOLUTION_12</code></td><td>기본값 14-bit 그대로면 0~16383, 전압 약 4배</td></tr><tr><td>… &gt; Bypass resolution processing</td><td><code>false</code> (기본값)</td><td>결과 버퍼에 12-bit 값으로 변환</td></tr><tr><td>… &gt; Channel configurations array &gt; Adc Physical Channel Name</td><td><code>S10_ChanNum34</code></td><td>사용할 채널</td></tr><tr><td>… &gt; Adc Physical Channel Id</td><td><code>34</code></td><td>위 채널 번호와 똑같이</td></tr><tr><td>… &gt; Adc Channel Resolution</td><td>비워둘 것 (기본값)</td><td>NXP에서는 사용되지 않음</td></tr><tr><td>AdcGeneral &gt; Adc Result Alignment</td><td><code>ADC_ALIGN_RIGHT</code> (기본값)</td><td>드라이버 전체에 하나, <code>MCR[WLSIDE]=0</code></td></tr></tbody></table></div>
+      <h3>Adc 설정: group</h3>
+      <div class="table-wrap"><table><thead><tr><th>항목</th><th>설정값</th><th>목적</th></tr></thead><tbody><tr><td>Group configurations array &gt; Name</td><td><code>AdcGroup_POT</code></td><td>C 코드의 <code>AdcGroup_POT</code>에 대응</td></tr><tr><td>Adc Group Conversion Mode</td><td><code>ADC_CONV_MODE_ONESHOT</code></td><td>한 번 시작해 결과 한 개 획득</td></tr><tr><td>Adc Group Trigger Source</td><td><code>ADC_TRIGG_SRC_SW</code></td><td>C 코드로 트리거 발생</td></tr><tr><td>Adc Group Notification</td><td><code>Adc1_Callback</code></td><td>변환 완료 시 ISR이 호출하는 콜백 이름</td></tr></tbody></table></div>
+      <h3>Adc 설정: 하드웨어 평균과 콜백</h3>
+      <div class="table-wrap"><table><thead><tr><th>항목</th><th>설정값</th><th>설명</th></tr></thead><tbody><tr><td>AutosarExt &gt; Adc Conversion Time Once</td><td><code>true</code> (기본값)</td><td>hardware unit 단위로 한 번 설정</td></tr><tr><td>AdcHwUnit &gt; AdcNormalConvTimings</td><td>컨테이너 추가</td><td>없으면 평균이 꺼짐</td></tr><tr><td>… &gt; Adc Hardware Average Enable</td><td><code>true</code></td><td><code>MCR[AVGEN]=1</code> 묶음 평균 사용</td></tr><tr><td>… &gt; Adc Hardware Average Select</td><td><code>SAMPLES_8</code></td><td><code>MCR[AVGS]=01b</code></td></tr><tr><td>AdcGeneral &gt; Adc Notification Capability</td><td><code>true</code> (기본값)</td><td>group notification 사용 (false면 콜백 항목 편집 불가)</td></tr><tr><td>AdcHwConfiguration &gt; Adc Normal Interrupt Enable</td><td><code>true</code> (기본값 false)</td><td>normal 변환 완료 ISR 처리 코드 생성</td></tr></tbody></table></div>
+      <h3>Platform · Mcu 설정</h3>
+      <div class="table-wrap"><table><thead><tr><th>항목</th><th>설정값</th><th>설명</th></tr></thead><tbody><tr><td>Interrupt Controller &gt; PlatformIsrConfig</td><td>컨테이너 추가</td><td>ADC 샘플 완료 처리용</td></tr><tr><td>… &gt; Interrupt Name / Interrupt Enabled</td><td><code>ADC1_IRQn</code> / <code>true</code></td><td></td></tr><tr><td>… &gt; Handler</td><td><code>Adc_Sar_1_Isr</code></td><td>RTD handler</td></tr><tr><td>McuModeSettingConf &gt; McuPeripheral 탭 &gt; ADC_1</td><td>Peripheral Clock Enable 체크</td><td>ADC1 하드웨어 유닛에 클럭 공급</td></tr></tbody></table></div>
+      <h3>평균 설정이 어느 쪽에서 쓰일까: Time Once</h3>
+      <div class="table-wrap"><table><thead><tr><th>구분</th><th>hardware unit 쪽 (AdcNormalConvTimings)</th><th>group 쪽</th></tr></thead><tbody><tr><td>쓰이는 조건</td><td>Time Once = <code>true</code> (기본값)</td><td>Time Once = <code>false</code></td></tr><tr><td>설정 단위</td><td>hardware unit에 한 값</td><td>group마다 다른 값</td></tr><tr><td>기록 시점</td><td><code>Adc_Init()</code> 때 한 번</td><td>group 변환 시작마다</td></tr><tr><td>장점</td><td>레지스터를 다시 안 씀</td><td>group별 평균 횟수</td></tr></tbody></table></div>
+      <p class="prose">두 설정이 동시에 쓰이지는 않아요. Time Once 하나로 결정돼요. 이 실습은 기본값을 유지하고 hardware unit 쪽에서 설정해요. Time Once가 true여도 변환 API가 모두 group을 인자로 받기 때문에 group은 최소 1개 필요해요.</p>
+      <div class="bubble"><div class="who"></div><div class="say"><b>group 단위 설정 (코드 분석 결과, 보드 시험 전)</b>Time Once = false에서 평균을 끈 group은 평균을 끄지 않아요. 평균을 켠 group을 실행한 뒤에는 평균을 끈 group도 평균된 값을 읽을 수 있어요.</div></div>
+    </div>
+    <div data-pane="ipl" hidden>
+      <h3>프로젝트 파일 (IPL)</h3>
+      <pre class="tree">chap06_adc_ipl/
+|-- chap06_adc_ipl.mex                 [생성]
+|-- generate/include/
+|   |-- Adc_Sar_Ip_PBcfg.h             [생성]
+|   |-- Clock_Ip_Cfg.h                 [생성]
+|   `-- Lpi2c_Ip_PBcfg.h / Siul2_Port_Ip_PBcfg.h
+|-- generate/src/ (같은 이름의 .c)     [생성]
+|-- src/
+|   |-- adc_filter.h / adc_filter.c    [작성]
+|   |-- lcd1602.h / lcd1602.c          [4장에서 복사]
+|   `-- main.c                         [작성]
+`-- reports/chap06_adc_ipl_check.md</pre>
+      <h3>Config Tools 순서</h3>
+      <ol class="prose rules">
+        <li><code>chap06_adc_ipl.mex</code>를 열어요.</li>
+        <li><b>Pins</b> 탭에서 PTA11을 ADC 입력으로, PTC6/PTC7을 LPI2C1로 설정해요.</li>
+        <li><b>Peripherals</b>에 Clock_Ip, Siul2_Port_Ip, Adc_Sar_Ip, Lpi2c_Ip를 추가해요.</li>
+        <li>ADC1_S10 normal chain과 ADC1 config 객체를 만들고, 분해능 12-bit, 평균 8회로 해요.</li>
+        <li><b>Update Code</b> 후 <code>Adc_Sar_Ip_PBcfg.h</code>에서 심볼을 확인해요.</li>
+      </ol>
+      <h3>설정 ①: 핀과 instance</h3>
+      <div class="table-wrap"><table><thead><tr><th>Component</th><th>Inspector 항목</th><th>설정값</th></tr></thead><tbody><tr><td>Siul2_Port_Ip</td><td>PTA11의 Mux / Input buffer</td><td><code>ADC1_S10</code> / digital input disable</td></tr><tr><td>Adc_Sar_Ip</td><td>Adc Instance</td><td><code>ADC1</code></td></tr><tr><td>Adc_Sar_Ip</td><td>normal chain의 channel</td><td><code>ADC1_S10</code></td></tr><tr><td>Adc_Sar_Ip</td><td>Trigger / Conversion mode</td><td>Software / One-shot</td></tr></tbody></table></div>
+      <h3>설정 ②: 분해능과 정렬</h3>
+      <div class="table-wrap"><table><thead><tr><th>Inspector 항목</th><th>설정값</th><th>확인 목적</th></tr></thead><tbody><tr><td>Conversion resolution</td><td><code>RESOLUTION_12</code> (기본값 14-bit)</td><td>0~4095 범위 (<code>RESN=001b</code>)</td></tr><tr><td>Bypass resolution processing</td><td><code>false</code> (기본값)</td><td>API가 12-bit 값으로 변환</td></tr><tr><td>data alignment</td><td><code>ADC_SAR_IP_DATA_ALIGNED_RIGHT</code></td><td>우측 정렬 (<code>WLSIDE=0</code>)</td></tr></tbody></table></div>
+      <h3>설정 ③: 하드웨어 평균</h3>
+      <div class="table-wrap"><table><thead><tr><th>Inspector 항목</th><th>설정값</th><th>확인 목적</th></tr></thead><tbody><tr><td>Adc Hardware Average Enable</td><td><code>true</code></td><td>묶음 평균 활성화 (<code>MCR[AVGEN]=1</code>)</td></tr><tr><td>Adc Hardware Average Select</td><td><code>SAMPLES_8</code></td><td>변환당 8회 평균 (<code>MCR[AVGS]=01b</code>)</td></tr></tbody></table></div>
+      <p class="prose">Update Code 후 <code>generate/src/Adc_Sar_Ip_PBcfg.c</code>의 ADC1 config 객체에서 <code>AvgEn = TRUE</code>, <code>AvgSel = ADC_SAR_IP_AVG_8_CONV</code>를 확인해요. <code>Adc_Sar_Ip_Init()</code>이 이 값을 <code>MCR[AVGEN]</code>과 <code>MCR[AVGS]</code>에 기록하니까, 설정이 빠지면 코드가 같아도 평균되지 않은 값이 읽혀요.</p>
+      <h3>LCD용 LPI2C 설정</h3>
+      <div class="table-wrap"><table><thead><tr><th>Component</th><th>항목</th><th>설정값</th></tr></thead><tbody><tr><td>Clock_Ip</td><td>LPI2C1 clock reference</td><td>enable, calculated frequency non-zero</td></tr><tr><td>Siul2_Port_Ip</td><td>PTC6 / PTC7</td><td>LPI2C1 SDA/SCL, open-drain, pull-up</td></tr><tr><td>Lpi2c_Ip</td><td>instance / mode / baud rate</td><td>LPI2C1 / Master / 100 kbit/s</td></tr><tr><td>Lpi2c_Ip</td><td>transfer method</td><td>Interrupt, DMA disable</td></tr></tbody></table></div>
+      <div class="bubble"><div class="who"></div><div class="say"><b>ADC 인터럽트는 쓰지 않아요</b>이 실습은 <code>Adc_Sar_Ip_GetStatusFlags()</code>로 normal end-chain flag를 폴링해요. 그래서 ADC notification과 ADC IRQ는 필요 없어요. 반면 LCD의 LPI2C 설정은 4장 실습 A와 똑같이 둬요. 생성 심볼 이름은 프로젝트마다 다를 수 있으니, 매크로를 생성 헤더의 이름으로 바꿔요.</div></div>
+    </div>
+  </section>
+
+  <!-- 08 실습 코드 -->
+  <section data-reveal>
+    <h2><span class="num">08</span>실습 코드 한 줄씩</h2>
+    <p class="prose">main 루프 한 바퀴를 따라가요. ADC를 읽는 함수에서 하드웨어 평균이 만들어지고, <code>AdcFilter_Update()</code>에서 이동 평균이 되고, 전압으로 환산돼 LCD에 찍혀요. 숫자는 설명용 예시예요. 이동 평균 코드(<code>adc_filter.c</code>)는 두 프로젝트가 똑같아요.</p>
+    <div class="row case-row" role="group" aria-label="프로젝트 선택">
+      <button class="key" type="button" data-proj="mcal" aria-pressed="true">chap06_adc_mcal</button>
+      <button class="key" type="button" data-proj="ipl" aria-pressed="false">chap06_adc_ipl</button>
+    </div>
+    <div id="adcStepper"></div>
+    <div data-pane="mcal">
+      <h3>실행 확인 (MCAL)</h3>
+      <ul class="prose rules">
+        <li>Project &gt; Build Project로 빌드하고, PEmicro 디버거로 Debug 후 Resume해요.</li>
+        <li><code>Adc1_Callback()</code>에 breakpoint를 걸어 콜백이 불리는지 확인하고 해제해요.</li>
+        <li>가변저항을 돌려 HW · MA · mV가 함께 변하는지, 멈췄을 때 MA가 HW보다 덜 흔들리는지 확인해요.</li>
+      </ul>
+    </div>
+    <div data-pane="ipl" hidden>
+      <h3>실행 확인 (IPL)</h3>
+      <ul class="prose rules">
+        <li>Project &gt; Build Project로 <code>chap06_adc_ipl</code>을 빌드하고, Run &gt; Debug Configurations... &gt; GDB PEMicro Interface Debugging으로 Debug 후 Resume해요.</li>
+        <li>가변저항을 돌리면 HW 값과 MA 값이 연속적으로 변해요.</li>
+        <li>멈추면 MA 값이 HW 값보다 덜 흔들리고, 빠르게 돌리면 MA 값이 HW 값을 조금 늦게 따라가요.</li>
+      </ul>
+    </div>
+    <h3>남길 스크린샷</h3>
+    <ul class="prose rules">
+      <li>Pins 탭에서 PTA11 ADC 입력이 선택된 화면</li>
+      <li>Peripherals의 ADC 설정 (하드웨어 평균 포함)</li>
+      <li>LCD의 HW / MA / mV 표시</li>
+    </ul>
+  </section>
+
+  <!-- 09 MCAL vs IPL -->
+  <section data-reveal>
+    <h2><span class="num">09</span>MCAL vs IPL: 같은 읽기, 다른 길</h2>
+    <p class="prose">MCAL을 배운 뒤로 수업 실습은 주로 <b>MCAL</b>로 진행해요. 실습 B(MCAL)는 group을 만들고 변환 완료를 <b>콜백</b>으로 받아요. 실습 A(IPL)는 <code>Adc_Sar_Ip</code>를 직접 쓰고 완료 flag를 <b>폴링</b>해서 ADC 인터럽트와 notification이 필요 없어요. 두 방식은 섞지 않아요. MCAL의 <code>AdcGroup_POT</code>나 <code>Adc_*</code> API를 IPL 프로젝트에 넣으면 안 돼요.</p>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>하는 일</th><th>IPL (Adc_Sar_Ip)</th><th>MCAL (Adc)</th></tr></thead>
+        <thead><tr><th>하는 일</th><th>MCAL (Adc) · 주력</th><th>IPL (Adc_Sar_Ip)</th></tr></thead>
         <tbody>
-          <tr><td>초기화</td><td><code>Adc_Sar_Ip_Init(ADCHWUNIT_0_INSTANCE, &amp;AdcHwUnit_0)</code></td><td><code>Adc_Init(NULL_PTR)</code></td></tr>
-          <tr><td>변환 시작</td><td><code>Adc_Sar_Ip_StartConversion(ADC_INSTANCE, ADC_SAR_IP_CONV_CHAIN_NORMAL)</code></td><td><code>Adc_StartGroupConversion(AdcGroup_POT)</code></td></tr>
-          <tr><td>완료 확인</td><td>flag 폴링: <code>GetStatusFlags() &amp; NORMAL_ENDCHAIN</code></td><td>콜백 <code>Adc1_Callback()</code>이 <code>AdcConvDone</code>을 세움</td></tr>
-          <tr><td>결과 읽기</td><td><code>Adc_Sar_Ip_GetConvData(ADC_INSTANCE, ADC1_S10_CHANNEL_INDEX)</code></td><td><code>Adc_ReadGroup(AdcGroup_POT, AdcResultBuffer)</code></td></tr>
-          <tr><td>채널 지정</td><td>채널 index <code>ADC1_S10_CHANNEL_INDEX</code></td><td>group <code>AdcGroup_POT</code> (물리 채널 <code>S10_ChanNum34</code>)</td></tr>
-          <tr><td>평균 설정</td><td>config 객체 <code>AvgEn = TRUE</code>, <code>AvgSel = ADC_SAR_IP_AVG_8_CONV</code></td><td>hardware unit의 <code>AdcNormalConvTimings</code> (SAMPLES_8)</td></tr>
-          <tr><td>인터럽트</td><td>쓰지 않음</td><td><code>ADC1_IRQn</code> → <code>Adc_Sar_1_Isr</code> → 콜백</td></tr>
+          <tr><td>초기화</td><td><code>Adc_Init(NULL_PTR)</code></td><td><code>Adc_Sar_Ip_Init(ADCHWUNIT_0_INSTANCE, &amp;AdcHwUnit_0)</code></td></tr>
+          <tr><td>변환 시작</td><td><code>Adc_StartGroupConversion(AdcGroup_POT)</code></td><td><code>Adc_Sar_Ip_StartConversion(ADC_INSTANCE, ADC_SAR_IP_CONV_CHAIN_NORMAL)</code></td></tr>
+          <tr><td>완료 확인</td><td>콜백 <code>Adc1_Callback()</code>이 <code>AdcConvDone</code>을 세움</td><td>flag 폴링: <code>GetStatusFlags() &amp; NORMAL_ENDCHAIN</code></td></tr>
+          <tr><td>결과 읽기</td><td><code>Adc_ReadGroup(AdcGroup_POT, AdcResultBuffer)</code></td><td><code>Adc_Sar_Ip_GetConvData(ADC_INSTANCE, ADC1_S10_CHANNEL_INDEX)</code></td></tr>
+          <tr><td>채널 지정</td><td>group <code>AdcGroup_POT</code> (물리 채널 <code>S10_ChanNum34</code>)</td><td>채널 index <code>ADC1_S10_CHANNEL_INDEX</code></td></tr>
+          <tr><td>평균 설정</td><td>hardware unit의 <code>AdcNormalConvTimings</code> (SAMPLES_8)</td><td>config 객체 <code>AvgEn = TRUE</code>, <code>AvgSel = ADC_SAR_IP_AVG_8_CONV</code></td></tr>
+          <tr><td>인터럽트</td><td><code>ADC1_IRQn</code> → <code>Adc_Sar_1_Isr</code> → 콜백</td><td>쓰지 않음</td></tr>
         </tbody>
       </table>
     </div>
     <h3>초기화 순서 (외우기)</h3>
+    <p class="order-label">MCAL · 주력 (Mcu·I2C 초기화 생략)</p>
+    <div class="order" data-order="Platform_Init|Port_Init|Adc_Init|Lcd1602_Init|AdcFilter_Init|Adc_SetupResultBuffer|Adc_EnableGroupNotification"></div>
     <p class="order-label">IPL (Mcu·I2C 설정은 생략)</p>
     <div class="order" data-order="Adc_Sar_Ip_Init|Adc_Sar_Ip_DoCalibration (최대 6회 시도)|Lpi2c_Ip_MasterInit|Lcd1602_Init|AdcFilter_Init"></div>
-    <p class="order-label">MCAL (Mcu·I2C 초기화 생략)</p>
-    <div class="order" data-order="Platform_Init|Port_Init|Adc_Init|Lcd1602_Init|AdcFilter_Init|Adc_SetupResultBuffer|Adc_EnableGroupNotification"></div>
     <h3>MCAL에서 콜백이 불리는 길</h3>
     <div class="widget" id="cbWidget">
       <div class="chain" id="cbChain"></div>
@@ -167,7 +296,7 @@ void Adc1_Callback(void)
 
   <!-- 08 문제 해결 -->
   <section data-reveal>
-    <h2><span class="num">08</span>안 될 때 확인할 것</h2>
+    <h2><span class="num">10</span>안 될 때 확인할 것</h2>
     <div class="table-wrap">
       <table>
         <thead><tr><th>증상</th><th>가능한 원인</th><th>확인 · 조치</th></tr></thead>
@@ -186,7 +315,7 @@ void Adc1_Callback(void)
   </section>
 
   <section data-reveal>
-    <h2><span class="num">09</span>체크 퀴즈</h2>
+    <h2><span class="num">11</span>체크 퀴즈</h2>
     <div class="widget" id="quiz"></div>
   </section>
 </main>

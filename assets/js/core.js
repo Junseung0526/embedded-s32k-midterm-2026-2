@@ -158,6 +158,24 @@ EV.xref = function (span) {
   span.addEventListener("click", () => (on(), setTimeout(off, 1600)));
 };
 
+// MCAL / IPL 프로젝트 전환 버튼. 수업 실습이 주로 MCAL이라 기본값은 mcal, 마지막 선택은 이 브라우저에 기억한다.
+// EV.projTabs("버튼 선택자", (key) => 화면을 key 프로젝트로 바꾸는 함수)
+// 같은 페이지의 버튼들은 함께 움직이고, 선택자 밖에 data-pane="mcal|ipl" 요소가 있으면 hidden으로 보였다 숨긴다.
+EV.projTabs = function (selector, apply) {
+  const btns = [...document.querySelectorAll(selector)];
+  const panes = [...document.querySelectorAll("[data-pane]")];
+  const pick = (key, save) => {
+    btns.forEach((b) => b.setAttribute("aria-pressed", b.dataset.proj === key));
+    panes.forEach((p) => (p.hidden = p.dataset.pane !== key));
+    if (save) try { localStorage.setItem("ev-proj", key); } catch (_) {}
+    apply(key);
+  };
+  let first = "mcal";
+  try { const k = localStorage.getItem("ev-proj"); if (k === "ipl" || k === "mcal") first = k; } catch (_) {}
+  btns.forEach((b) => b.addEventListener("click", () => pick(b.dataset.proj, true)));
+  pick(first, false);
+};
+
 // 페이지 순서 (허브 목록과 같은 순서). [파일, 번호, 제목]
 EV.PAGES = [
   ["hints.html", "HINT", "교수님 힌트 1 · 2"],

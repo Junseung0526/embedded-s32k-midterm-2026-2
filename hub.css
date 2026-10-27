@@ -5,6 +5,11 @@
 .hub { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 24px; align-items: start; }
 @media (max-width: 900px) { .hub { grid-template-columns: minmax(0, 1fr); } }
 .board-wrap { margin: 0; }
+/* 좁은 화면에서는 보드를 줄이지 않고 옆으로 밀어서 본다 (라벨이 읽히는 크기 유지) */
+@media (max-width: 640px) {
+  .board-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -16px; padding: 0 16px; }
+  #board { min-width: 620px; }
+}
 #board { width: 100%; height: auto; display: block; font-family: var(--mono); overflow: visible; }
 
 #board .pcb { fill: var(--pcb); stroke: var(--pcb-edge); stroke-width: 2; }

@@ -26,6 +26,7 @@ svg.timeline .win { fill: var(--clk); opacity: .22; }
 @media (max-width: 640px) { .groups { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* 인터럽트 Stepper 오른쪽 그림 */
+.case-row { margin-top: 12px; }
 .flow { display: flex; flex-direction: column; gap: 4px; }
 .flow .chip { justify-content: flex-start; }
 .flow .chip.done { color: var(--ink-2); }

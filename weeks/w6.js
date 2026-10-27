@@ -214,6 +214,136 @@ uint16_t AdcFilter_Update(AdcFilter_t *f, uint16_t sample)
     });
   }
 
+  /* ---------- 08. 실습 코드 Stepper (MCAL / IPL 번갈아 보기) ---------- */
+  {
+    // 예시 값: 이전 읽기까지의 결과 → 이번 읽기
+    const PREV = { hw: 2088, ma: 2025 }, NEW = { hw: 2100, ma: 2040 };
+    const toMv = (v) => Math.floor((v * 5000) / 4095);
+    const lcd = (hw, ma) => [`HW:${String(hw).padStart(4, "0")} MA:${String(ma).padStart(4, "0")}`, `Voltage: ${Math.floor(toMv(ma) / 1000)}.${String(toMv(ma) % 1000).padStart(3, "0")}`];
+    const [p0, p1] = lcd(PREV.hw, PREV.ma);
+    const [n0, n1] = lcd(NEW.hw, NEW.ma);
+    const at = (s, patch) => ({ ...s, ...patch, vars: { ...s.vars, ...(patch.vars || {}) } });
+
+    // main 루프 뒤쪽(필터 → 전압 → LCD)은 두 프로젝트가 같고 줄 번호만 다르다
+    const COMMON_TAIL = (line0) => [
+      { line: line0 + 1, note: "하드웨어 8회 평균(hw_avg)을 이동 평균 필터에 넣어요. 필터 결과 filtered가 나와요. filtered 하나에는 변환 8 × 8 = 64회가 들어 있어요.", apply: (s) => at(s, { vars: { filtered: NEW.ma } }) },
+      { line: line0 + 2, note: `filtered를 mV로 환산해요: ${NEW.ma} × 5000 / 4095 = ${toMv(NEW.ma)} mV. Vref 5000 mV는 교재 예제 기준이라 실제 값은 확인해야 해요.`, apply: (s) => at(s, { vars: { mv: toMv(NEW.ma) } }) },
+      { line: [line0 + 3, line0 + 4], note: "첫 번째 줄에 HW와 MA를 찍어요. LCD 출력은 I2C라 느려서 main에서 해요.", apply: (s) => at(s, { lcd0: n0 }) },
+      { line: line0 + 5, note: "두 번째 줄 Voltage도 같은 방식으로 찍어요. 다음 바퀴에서 다시 처음부터 읽어요.", apply: (s) => at(s, { lcd1: n1 }) },
+    ];
+
+    const PROJ = {
+      mcal: {
+        title: "chap06_adc_mcal · main.c (줄임)",
+        keys: ["AdcConvDone", "Result[0]", "hw_avg", "filtered", "mv"],
+        code: `
+static volatile boolean AdcConvDone = FALSE;
+
+void Adc1_Callback(void)
+{
+    AdcConvDone = TRUE;   /* ISR 안: 플래그만 세우고 끝 */
+}
+
+static uint16_t ReadPotAdcMcal(void)
+{
+    AdcConvDone = FALSE;
+    Adc_StartGroupConversion(AdcGroup_POT);
+    while (FALSE == AdcConvDone) { }
+    (void)Adc_ReadGroup(AdcGroup_POT, AdcResultBuffer);
+    return (uint16_t)AdcResultBuffer[0U];
+}
+
+/* main 루프 한 바퀴 */
+hw_avg   = ReadPotAdcMcal();
+filtered = AdcFilter_Update(&AdcFilter, hw_avg);
+mv = ((uint32_t)filtered * 5000U) / 4095U;
+snprintf(line, sizeof(line), "HW:%04lu MA:%04lu", hw_avg, filtered);
+Lcd1602_SetCursor(0U, 0U);  Lcd1602_Puts(line);
+/* 두 번째 줄 Voltage: x.xxx 도 같은 방식 */`,
+        init: { AdcConvDone: "FALSE", "Result[0]": "-" },
+        steps: [
+          { line: 18, note: "main이 ReadPotAdcMcal()을 불러요.", apply: (s) => at(s, { phase: "ReadPotAdcMcal 진입" }) },
+          { line: 10, note: "완료 플래그를 FALSE로 내려요. 이 변수는 콜백(ISR)과 main이 함께 쓰니까 volatile이에요.", apply: (s) => at(s, { vars: { AdcConvDone: "FALSE" } }) },
+          { line: 11, note: "AdcGroup_POT의 변환을 시작해요. 하드웨어 평균이 켜져 있어서 ADC1_S10을 8번 연속 변환하기 시작해요.", apply: (s) => at(s, { phase: "변환 시작", conv: 0 }) },
+          { line: 12, note: "플래그가 TRUE가 될 때까지 main은 여기서 기다려요. 이 자리에서 다른 일을 할 수도 있어요. 그동안 ADC는 변환 중이에요.", apply: (s) => at(s, { phase: "변환 중 (main 대기)", conv: 4 }) },
+          { line: 5, note: "8번 변환의 평균이 결과 레지스터에 써지고, ADC1_IRQn → Adc_Sar_1_Isr → RTD ISR → Adc1_Callback() 순서로 불려요. 콜백은 플래그만 세워요.", apply: (s) => at(s, { phase: "ISR: 콜백 실행", conv: 8, vars: { AdcConvDone: "TRUE" } }), predict: { q: "ADC 완료 콜백(ISR) 안에서 해야 할 일은?", choices: ["LCD에 값 출력", "플래그만 세우고 바로 복귀", "Delay로 값 안정화"], answer: 1 } },
+          { line: 12, note: "플래그가 TRUE가 되어 while을 빠져나와요. 콜백이 한 번이라도 안 불리면 여기서 영원히 멈춰요.", apply: (s) => at(s, { phase: "main 재개" }) },
+          { line: 13, note: "Adc_ReadGroup으로 결과 버퍼에 값을 가져와요. 이 값은 8번 변환의 평균이에요.", apply: (s) => at(s, { vars: { "Result[0]": NEW.hw } }), predict: { q: "결과 버퍼의 값은 무엇일까?", choices: ["마지막 1회 변환 결과", "8회 변환의 묶음 평균", "지난 8번 읽기의 이동 평균"], answer: 1 } },
+          { line: 14, note: "버퍼 값을 돌려줘요. 이게 hw_avg예요.", apply: (s) => at(s, { phase: "읽기 끝", vars: { hw_avg: NEW.hw } }) },
+          ...COMMON_TAIL(18),
+        ],
+      },
+      ipl: {
+        title: "chap06_adc_ipl · main.c (줄임)",
+        keys: ["ENDCHAIN flag", "hw_avg", "filtered", "mv"],
+        code: `
+static uint16_t ReadPotAdcIp(void)
+{
+    uint16_t hw_avg;
+
+    Adc_Sar_Ip_StartConversion(ADC_INSTANCE, ADC_SAR_IP_CONV_CHAIN_NORMAL);
+    while ((Adc_Sar_Ip_GetStatusFlags(ADC_INSTANCE)
+            & ADC_SAR_IP_STATUS_FLAG_NORMAL_ENDCHAIN) == 0U)
+    { }
+
+    hw_avg = Adc_Sar_Ip_GetConvData(ADC_INSTANCE, ADC1_S10_CHANNEL_INDEX);
+    Adc_Sar_Ip_ClearStatusFlags(ADC_INSTANCE, ADC_SAR_IP_STATUS_FLAG_NORMAL_ENDCHAIN);
+    return hw_avg;
+}
+
+/* main 루프 한 바퀴 */
+hw_avg   = ReadPotAdcIp();
+filtered = AdcFilter_Update(&AdcFilter, hw_avg);
+mv = ((uint32_t)filtered * 5000U) / 4095U;
+snprintf(line, sizeof(line), "HW:%04lu MA:%04lu", hw_avg, filtered);
+Lcd1602_SetCursor(0U, 0U);  Lcd1602_Puts(line);
+/* 두 번째 줄 Voltage: x.xxx 도 같은 방식 */`,
+        init: { "ENDCHAIN flag": 0 },
+        steps: [
+          { line: 16, note: "main이 ReadPotAdcIp()를 불러요.", apply: (s) => at(s, { phase: "ReadPotAdcIp 진입" }) },
+          { line: 5, note: "normal chain 변환을 시작해요. 하드웨어 평균이 켜져 있어서 ADC1_S10을 8번 연속 변환하기 시작해요.", apply: (s) => at(s, { phase: "변환 시작", conv: 0 }) },
+          { line: [6, 8], note: "end-chain flag가 0이라 이 while을 계속 돌아요(폴링). 그동안 ADC는 변환 중이에요.", apply: (s) => at(s, { phase: "변환 중 (flag 폴링)", conv: 4 }) },
+          { line: [6, 8], note: "8번 변환이 끝나 NORMAL_ENDCHAIN flag가 서요. while 조건이 거짓이 되어 빠져나와요.", apply: (s) => at(s, { phase: "변환 완료", conv: 8, vars: { "ENDCHAIN flag": 1 } }), predict: { q: "이 IPL 실습에서 변환 완료는 어떻게 알아낼까?", choices: ["ADC 인터럽트 콜백", "완료 flag 폴링", "DMA 전송 완료"], answer: 1 } },
+          { line: 10, note: "GetConvData로 결과를 읽어요. 값은 이미 8번 변환의 묶음 평균이에요. 이전 읽기의 값은 섞여 있지 않아요.", apply: (s) => at(s, { vars: { hw_avg: NEW.hw } }), predict: { q: "GetConvData()가 돌려주는 값은?", choices: ["마지막 1회 변환 결과", "8회 변환의 묶음 평균", "지난 8번 읽기의 이동 평균"], answer: 1 } },
+          { line: 11, note: "다음 변환을 위해 flag를 지워요. 빠뜨리면 다음에는 시작하자마자 완료로 오해해요.", apply: (s) => at(s, { vars: { "ENDCHAIN flag": 0 } }) },
+          { line: 12, note: "hw_avg를 돌려줘요.", apply: (s) => at(s, { phase: "읽기 끝" }) },
+          ...COMMON_TAIL(16),
+        ],
+      },
+    };
+
+    function build(key) {
+      const p = PROJ[key];
+      const side = h("div");
+      const dots = Array.from({ length: 8 }, () => h("i"));
+      const adcText = h("span");
+      side.append(h("div", { class: "adc-box" }, "ADC1_S10", h("span", { class: "dots" }, dots), adcText));
+      const adcView = {
+        render(s) {
+          dots.forEach((d, i) => d.classList.toggle("on", i < s.conv));
+          adcText.innerHTML = `변환 <b>${s.conv}</b>/8 · ${s.phase}`;
+        },
+      };
+      const vars = EV.varsView(side, p.keys);
+      const screen = side.appendChild(h("pre", { class: "lcd2" }));
+      const lcdView = { render: (s) => (screen.textContent = s.lcd0.padEnd(16, " ") + "\n" + s.lcd1.padEnd(16, " ")) };
+
+      const old = $("adcStepper");
+      const fresh = h("div", { id: "adcStepper" });
+      old.replaceWith(fresh);
+      EV.stepper(fresh, {
+        title: p.title,
+        code: p.code,
+        initial: { phase: "대기", conv: 0, lcd0: p0, lcd1: p1, vars: { ...p.init, hw_avg: PREV.hw, filtered: PREV.ma, mv: toMv(PREV.ma) } },
+        intro: `이전 읽기까지의 결과가 LCD에 떠 있어요 (HW ${PREV.hw}, MA ${PREV.ma}). 이번에 가변저항을 조금 돌려서 새로 읽는 상황이에요.`,
+        side,
+        views: [adcView, vars, lcdView],
+        steps: p.steps,
+      });
+    }
+    EV.projTabs(".case-row [data-proj]", build);
+  }
+
   /* ---------- 06. 14-bit 기본값 함정 ---------- */
   let resBits = 14;
   function drawTrap() {
@@ -275,6 +405,7 @@ uint16_t AdcFilter_Update(AdcFilter_t *f, uint16_t sample)
     { q: "보드 내장 가변저항(ADC_POT0, PTA11)을 읽을 ADC 입력은?", choices: ["ADC0 채널 10", "ADC1 채널 10", "ADC0 채널 11", "채널은 코드에서 아무거나 골라도 된다"], answer: 1, why: "채널은 핀이 정해요. PTA11은 ADC1의 S10이에요. MCAL 설정에서는 S10_ChanNum34로 보여요." },
     { q: "하드웨어 8회 평균 위에 N=8 이동 평균을 쓰면 filtered 하나에 들어가는 변환은 몇 회일까?", choices: ["8회", "16회", "64회", "4095회"], answer: 2, why: "filtered 1개 = 최근 8번 읽기, 읽기 1번 = 8회 변환이라 8 × 8 = 64회예요. 대신 새 값을 다 따라가는 데 8번을 더 읽어야 해요." },
     { q: "분해능을 기본값 그대로 두면 전압이 약 4배로 표시되는 이유는?", choices: ["Vref가 4배라서", "기본값이 14-bit라 코드가 0~16383까지 나오는데 식은 4095로 나누기 때문", "하드웨어 평균이 꺼져서", "좌측 정렬이라서"], answer: 1, why: "Conversion resolution 기본값은 14-bit(RESN)예요. RESOLUTION_12로 바꿔야 코드가 0~4095가 돼요." },
+    { q: "MCAL 실습(chap06_adc_mcal)에서 ADC 변환이 끝났다는 것을 main에 알리는 방법은?", choices: ["완료 flag를 계속 폴링한다", "Adc1_Callback()이 ISR 안에서 AdcConvDone을 TRUE로 세운다", "ADC가 결과를 main 변수에 직접 복사한다", "Delay로 변환 시간만큼 기다린다"], answer: 1, why: "MCAL은 group notification 콜백으로 알려요. Adc_EnableGroupNotification, Normal Interrupt Enable, Group Notification, Platform IRQ가 모두 맞아야 콜백이 불려요. IPL 실습은 반대로 flag를 폴링해요." },
     { q: "ISR(콜백)에서 세운 플래그를 main이 읽을 때, 컴파일러가 값을 캐싱하지 못하게 변수에 붙이는 키워드는?", answer: "volatile", why: "빠지면 콜백은 호출되는데 main이 계속 대기해요. AdcConvDone을 static volatile로 선언해요." },
   ]);
 })();

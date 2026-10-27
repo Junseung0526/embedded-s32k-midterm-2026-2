@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>5주차 인터럽트 · 임베디드</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect x=%277%27 y=%277%27 width=%2718%27 height=%2718%27 rx=%273%27 fill=%27%232B2C29%27/%3E%3Cpath d=%27M3 12h4M3 20h4M25 12h4M25 20h4M12 3v4M20 3v4M12 25v4M20 25v4%27 stroke=%27%238E8C85%27 stroke-width=%272%27/%3E%3Ccircle cx=%2721%27 cy=%2711%27 r=%273%27 fill=%27%23E8412C%27/%3E%3C/svg%3E">
 <link rel="stylesheet" href="../assets/css/base.css">
 <link rel="stylesheet" href="w5.css">
 </head>
@@ -69,7 +70,11 @@
   <!-- 04 인터럽트 따라가기 -->
   <section data-reveal>
     <h2><span class="num">04</span>인터럽트 한 번, 처음부터 끝까지</h2>
-    <p class="prose">IPL 실습 코드를 줄여서 가져왔어요. → 를 누르면 main 루프를 돌다가 버튼이 눌리고, <span class="xref" data-hl="#irqStepper .stack">스택</span>에 레지스터가 쌓이고, <span class="xref" data-hl="#irqStepper .flow .chip:nth-child(6)">콜백</span>이 실행되고, 원래 자리로 돌아와요.</p>
+    <p class="prose">실습 코드를 줄여서 가져왔어요. 아래 버튼으로 MCAL 프로젝트와 IPL 프로젝트를 번갈아 볼 수 있어요. 수업 실습은 주로 MCAL로 진행해요. → 를 누르면 main 루프를 돌다가 버튼이 눌리고, <span class="xref" data-hl="#irqStepper .stack">스택</span>에 레지스터가 쌓이고, <span class="xref" data-hl="#irqStepper .flow .chip:nth-child(6)">콜백</span>이 실행되고, 원래 자리로 돌아와요.</p>
+    <div class="row case-row" role="group" aria-label="프로젝트 선택">
+      <button class="key" type="button" data-proj="mcal" aria-pressed="true">chap05_interrupt_button_mcal</button>
+      <button class="key" type="button" data-proj="ipl" aria-pressed="false">chap05_interrupt_button_ipl</button>
+    </div>
     <div id="irqStepper"></div>
   </section>
 
@@ -126,7 +131,7 @@ void UserSw0_Callback(void)
 {
     static uint32_t last_tick = 0U;
     uint32_t now = GetSystemTick();
-    if ((now - last_tick) < DEBOUNCE_TICKS)
+    if ((now - last_tick) &lt; DEBOUNCE_TICKS)
     {
         return;  // 너무 가까움 = 접점 튐, 무시
     }
