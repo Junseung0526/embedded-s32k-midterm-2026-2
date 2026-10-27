@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>6주차 ADC · 임베디드</title>
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="w6.css">
+</head>
+<body>
+<header class="topbar">
+  <a href="../index.html">embedded-visual / 2026-2</a>
+  <span>w6 · adc</span>
+</header>
+
+<main class="page">
+  <section class="hero">
+    <div class="kicker">6주차 · chap06_adc_ipl / _mcal</div>
+    <h1>가변저항을 돌렸을 때<br>숫자가 LCD에 뜨기까지</h1>
+    <p class="lede">ADC_POT0(PTA11)의 전압이 ADC1_S10을 거쳐 정수 코드가 되고, 하드웨어 평균과 이동 평균을 지나 LCD에 HW · MA · 전압으로 찍혀요. 하나씩 만져 보면서 따라가요.</p>
+  </section>
+
+  <!-- 01 양자화 -->
+  <section data-reveal>
+    <h2><span class="num">01</span>양자화와 분해능</h2>
+    <p class="prose">ADC는 연속적인 전압을 정수 코드로 바꿔요. 12-bit면 이상적으로 0~4095이고, <code>V = code × Vref / 4095</code>예요. 분해능을 <span class="tangle" data-bind="bits" data-label="분해능 비트 수">12</span>-bit로 두면 코드는 몇 단계까지 있고 1 LSB는 얼마일까요? 숫자를 끌어 보세요. (Vref는 교재 예제대로 5000 mV)</p>
+    <div class="widget" id="quant">
+      <div class="row"><label for="bits">분해능 (비트)</label><input type="range" id="bits" min="2" max="14" value="12"></div>
+      <div class="row"><label for="vin">입력 전압 (mV)</label><input type="range" id="vin" min="0" max="5000" step="10" value="1800"></div>
+      <div id="quantSvg"></div>
+      <p class="readout" id="quantResult"></p>
+    </div>
+    <div class="bubble"><div class="who"></div><div class="say"><b>해석의 출발점</b>ADC 값은 "정확한 전압"이 아니라 센서·회로·기준전압·샘플링 조건의 결과예요. 기준전압 오차, 입력 노이즈, 샘플 시간, 회로 임피던스가 모두 값에 섞여 있어요.</div></div>
+  </section>
+
+  <!-- 02 SAR -->
+  <section data-reveal>
+    <h2><span class="num">02</span>SAR ADC: 비트를 위에서부터 하나씩</h2>
+    <p class="prose">입력 전압을 샘플-홀드로 잠시 잡아 두고, 내부 DAC와 비교기로 <b>가장 높은 비트부터</b> 하나씩 결정해요. 비트를 켜 본 값(DAC 출력)이 입력보다 크면 그 비트는 0, 아니면 1로 남겨요. 입력이 <span class="tangle" data-bind="sarIn" data-label="입력 코드">2400</span> 코드일 때 비트가 어떻게 정해질까요? <span class="xref" data-hl="#sar tr.cur" data-c="ink">지금 단계</span>를 끌어 보세요: <span class="tangle" data-bind="sarStep" data-label="비트 결정 단계">0</span> / 12</p>
+    <div class="widget" id="sar">
+      <div class="row"><label for="sarIn">입력 코드</label><input type="range" id="sarIn" min="0" max="4095" step="5" value="2400"></div>
+      <div class="row"><label for="sarStep">비트 결정 단계</label><input type="range" id="sarStep" min="0" max="12" value="0"></div>
+      <div class="table-wrap"><table class="sar-t" id="sarT"></table></div>
+      <p class="readout" id="sarResult"></p>
+    </div>
+    <p class="prose">입력 임피던스가 높거나 샘플 시간이 짧으면 샘플 커패시터가 충분히 충전되지 않아 값이 흔들려요. ADC가 이상하면 코드만 보지 말고 입력 핀 매핑, 기준전압, 입력 신호 범위, 샘플링 주기, 전원·GND 노이즈를 같이 봐요.</p>
+  </section>
+
+  <!-- 03 핀이 곧 채널 -->
+  <section data-reveal>
+    <h2><span class="num">03</span>가변저항에서 ADC1_S10까지</h2>
+    <p class="prose">보드 내장 가변저항(R393, 10 kΩ)은 PTA11(160번 핀)에 연결돼요. 노브 위치가 전압(0 ~ VDD_HV_A_PERH)이 되고, 이 핀이 <b>ADC1의 채널 S10</b>이에요. 채널은 내가 고르는 게 아니라 <b>핀이 정해요</b>. 노브 <span class="tangle" data-bind="knob" data-label="노브 위치 %">50</span>%에서 ADC 인스턴스를 바꿔 보세요.</p>
+    <div class="widget" id="pot">
+      <div class="row"><label for="knob">노브 위치 (%)</label><input type="range" id="knob" min="0" max="100" value="50"><span class="chip" id="knobLabel"></span></div>
+      <div class="chain" id="potChain"></div>
+      <div class="row">
+        <span class="widget-title" style="margin:0">읽을 ADC</span>
+        <button class="key" type="button" id="adc0" aria-pressed="false">ADC0</button>
+        <button class="key" type="button" id="adc1" aria-pressed="true">ADC1</button>
+      </div>
+      <p class="readout" id="potResult"></p>
+    </div>
+    <div class="bubble"><div class="who"></div><div class="say"><b>자주 틀리는 곳</b>온보드 가변저항은 ADC1 채널 10으로 읽어요. ADC0이 아니에요. MCAL 설정에서는 같은 채널이 <code>S10_ChanNum34</code>(Channel Id 34)로 나오고, 두 곳의 번호를 똑같이 맞춰야 해요.</div></div>
+  </section>
+
+  <!-- 04 두 평균 -->
+  <section data-reveal>
+    <h2><span class="num">04</span>하드웨어 평균과 이동 평균</h2>
+    <p class="prose">이번 실습은 평균을 두 번 써요. ADC가 한 번 변환할 때 같은 채널을 8번 연속 변환해 평균 하나를 내고(<code>MCR[AVGEN]=1</code>, <code>MCR[AVGS]</code>), 소프트웨어가 그 결과를 최근 8번 모아 한 번 더 평균을 내요.</p>
+    <div class="chain" id="avgChain"></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>구분</th><th>하드웨어 묶음 평균</th><th>소프트웨어 이동 평균</th></tr></thead>
+        <tbody>
+          <tr><td>평균 대상</td><td>연속 변환한 8개</td><td>지난 8번 읽은 값</td></tr>
+          <tr><td>이전 값 기억</td><td>없음 (매번 새로 모음)</td><td>있음 (원형 버퍼)</td></tr>
+          <tr><td>줄이는 노이즈</td><td>순간 노이즈</td><td>읽기 사이 흔들림</td></tr>
+          <tr><td>응답 지연</td><td>변환 시간만 늘어남</td><td>N번 읽어야 반영</td></tr>
+          <tr><td>구현 위치</td><td>ADC (설정만)</td><td><code>adc_filter.c</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="prose">노브를 갑자기 돌린 상황을 시뮬레이션했어요. 노이즈 <span class="tangle" data-bind="noise" data-label="노이즈 크기 LSB">30</span> LSB, 이동 평균 창 N=<span class="tangle" data-bind="winN" data-label="이동 평균 창 크기 N">8</span>로 해 보세요. 두 슬라이더를 움직이면 안정성과 응답 속도가 서로 바꿔치기되는 게 보여요.</p>
+    <div class="widget" id="filt">
+      <p class="widget-title">읽기 횟수 → <span class="badge extra"></span> 예시 신호 (노브를 12번째 읽기에서 돌림)</p>
+      <div id="filtSvg"></div>
+      <div class="row"><label for="noise">노이즈 (LSB)</label><input type="range" id="noise" min="0" max="80" value="30"></div>
+      <div class="row"><label for="winN">이동 평균 N</label><input type="range" id="winN" min="1" max="16" value="8"></div>
+      <p class="readout" id="filtResult"></p>
+    </div>
+    <p class="prose">두 평균이 겹치면 <code>filtered</code> 하나에는 8 × 8 = <b>64회 변환</b>이 같은 비중으로 들어가요. 값은 더 안정되지만, 가변저항을 돌리면 filtered가 새 값을 다 따라가는 데 8번을 더 읽어야 해요. 하드웨어 평균도 공짜가 아니라서 평균 횟수만큼 변환 시간이 늘어요. 가변저항처럼 느린 신호는 괜찮지만 모터 전류 같은 빠른 신호는 신중히 정해요.</p>
+    <div class="bubble"><div class="who"></div><div class="say"><b>적용 범위</b>하드웨어 평균 설정(<code>MCR</code>)은 ADC 인스턴스마다 하나라서 그 ADC의 모든 채널에 같은 평균이 적용돼요. 보정(calibration)용 평균은 별개이고, <code>Adc_Sar_Ip_DoCalibration()</code>이 32회로 직접 설정해요.</div></div>
+  </section>
+
+  <!-- 05 adc_filter.c -->
+  <section data-reveal>
+    <h2><span class="num">05</span>adc_filter.c 한 줄씩</h2>
+    <p class="prose">이동 평균은 매번 N개를 다시 더하지 않아요. <b>합(sum)을 들고 있다가 "가장 오래된 값을 빼고 새 값을 더해서"</b> 갱신해요. 그림에서는 칸을 4개로 줄였어요(<span class="xref" data-hl="#bufView .slot">칸</span>). → 를 눌러 같은 입력이 다섯 번 들어오는 과정을 따라가요.</p>
+    <div id="filterStepper"></div>
+    <div class="bubble"><div class="who"></div><div class="say"><b>count의 역할</b>처음엔 버퍼가 0으로 차 있어요. count 없이 항상 N으로 나누면 시작 직후 표시값이 작게 나와요. 그래서 다 차기 전에는 <b>채운 개수</b>로 나눠요. <code>AdcFilter_Init()</code>은 루프에 들어가기 전에 한 번만 불러요.</div></div>
+  </section>
+
+  <!-- 06 해상도 함정 -->
+  <section data-reveal>
+    <h2><span class="num">06</span>설정 함정: 기본 분해능은 14-bit</h2>
+    <p class="prose">Config Tools의 Conversion resolution 기본값은 14-bit예요. 바꾸지 않으면 코드는 0~16383이 되는데, 식은 그대로 <code>mv = filtered × 5000 / 4095</code>라서 전압이 약 4배로 찍혀요. 노브를 <span class="tangle" data-bind="trapKnob" data-label="노브 위치 %">50</span>%에 두고 설정을 바꿔 보세요.</p>
+    <div class="widget" id="trap">
+      <div class="row"><label for="trapKnob">노브 위치 (%)</label><input type="range" id="trapKnob" min="0" max="100" value="50"></div>
+      <div class="row">
+        <span class="widget-title" style="margin:0">Conversion resolution</span>
+        <button class="key" type="button" id="res14" aria-pressed="true">RESOLUTION_14 (기본값)</button>
+        <button class="key" type="button" id="res12" aria-pressed="false">RESOLUTION_12</button>
+      </div>
+      <div class="lcd2" id="trapLcd"></div>
+      <p class="readout" id="trapResult"></p>
+    </div>
+    <p class="prose">결과 레지스터 <code>PCDRn[CDATA]</code>는 15비트 폭이고, <code>MCR[WLSIDE]=0</code>(우측 정렬)이면 bits [14:0]에 값이 들어와요. 분해능은 <code>CALBISTREG[RESN]</code>에서 14·12·10·8-bit 중 골라요. <code>Adc_Sar_Ip_Init()</code>이 이 값들을 레지스터에 써 넣어요.</p>
+    <div class="bubble"><div class="who"></div><div class="say"><b>Vref도 확인</b>교재 계산 예제는 5000 mV를 기준으로 하지만, 실제 Vref는 보드 설정과 전원 상태에 따라 달라요. 보고서에는 실제 설정이나 측정값을 적어요.</div></div>
+  </section>
+
+  <!-- 07 IPL vs MCAL -->
+  <section data-reveal>
+    <h2><span class="num">07</span>IPL vs MCAL: 같은 읽기, 다른 길</h2>
+    <p class="prose">실습 A(IPL)는 <code>Adc_Sar_Ip</code>를 직접 쓰고 완료 flag를 <b>폴링</b>해요. 그래서 ADC 인터럽트와 notification은 필요 없어요. 실습 B(MCAL)는 group을 만들고 완료를 <b>콜백</b>으로 받아요. 두 방식은 섞지 않아요. MCAL의 <code>AdcGroup_POT</code>나 <code>Adc_*</code> API를 IPL 프로젝트에 넣으면 안 돼요.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>하는 일</th><th>IPL (Adc_Sar_Ip)</th><th>MCAL (Adc)</th></tr></thead>
+        <tbody>
+          <tr><td>초기화</td><td><code>Adc_Sar_Ip_Init(ADCHWUNIT_0_INSTANCE, &amp;AdcHwUnit_0)</code></td><td><code>Adc_Init(NULL_PTR)</code></td></tr>
+          <tr><td>변환 시작</td><td><code>Adc_Sar_Ip_StartConversion(ADC_INSTANCE, ADC_SAR_IP_CONV_CHAIN_NORMAL)</code></td><td><code>Adc_StartGroupConversion(AdcGroup_POT)</code></td></tr>
+          <tr><td>완료 확인</td><td>flag 폴링: <code>GetStatusFlags() &amp; NORMAL_ENDCHAIN</code></td><td>콜백 <code>Adc1_Callback()</code>이 <code>AdcConvDone</code>을 세움</td></tr>
+          <tr><td>결과 읽기</td><td><code>Adc_Sar_Ip_GetConvData(ADC_INSTANCE, ADC1_S10_CHANNEL_INDEX)</code></td><td><code>Adc_ReadGroup(AdcGroup_POT, AdcResultBuffer)</code></td></tr>
+          <tr><td>채널 지정</td><td>채널 index <code>ADC1_S10_CHANNEL_INDEX</code></td><td>group <code>AdcGroup_POT</code> (물리 채널 <code>S10_ChanNum34</code>)</td></tr>
+          <tr><td>평균 설정</td><td>config 객체 <code>AvgEn = TRUE</code>, <code>AvgSel = ADC_SAR_IP_AVG_8_CONV</code></td><td>hardware unit의 <code>AdcNormalConvTimings</code> (SAMPLES_8)</td></tr>
+          <tr><td>인터럽트</td><td>쓰지 않음</td><td><code>ADC1_IRQn</code> → <code>Adc_Sar_1_Isr</code> → 콜백</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>초기화 순서 (외우기)</h3>
+    <p class="order-label">IPL (Mcu·I2C 설정은 생략)</p>
+    <div class="order" data-order="Adc_Sar_Ip_Init|Adc_Sar_Ip_DoCalibration (최대 6회 시도)|Lpi2c_Ip_MasterInit|Lcd1602_Init|AdcFilter_Init"></div>
+    <p class="order-label">MCAL (Mcu·I2C 초기화 생략)</p>
+    <div class="order" data-order="Platform_Init|Port_Init|Adc_Init|Lcd1602_Init|AdcFilter_Init|Adc_SetupResultBuffer|Adc_EnableGroupNotification"></div>
+    <h3>MCAL에서 콜백이 불리는 길</h3>
+    <div class="widget" id="cbWidget">
+      <div class="chain" id="cbChain"></div>
+      <div class="row"><button class="key" type="button" id="cbBtn">변환 끝! (콜백까지 따라가기)</button><label class="check"><input type="checkbox" id="cbNotif" checked> Adc_EnableGroupNotification() 호출함</label></div>
+      <p class="readout" id="cbResult"></p>
+    </div>
+    <div class="isr-cmp">
+      <div><p class="widget-title good">좋은 콜백: 플래그만 세우고 즉시 복귀</p><pre data-code>
+static volatile boolean AdcConvDone = FALSE;
+
+void Adc1_Callback(void)
+{
+    AdcConvDone = TRUE;
+}</pre></div>
+      <div><p class="widget-title bad">나쁜 콜백: ISR에서 LCD 출력</p><pre data-code>
+void Adc1_Callback(void)
+{
+    Lcd1602_Puts("HW:1234");  // I2C 블로킹
+    AdcConvDone = TRUE;
+}</pre></div>
+    </div>
+    <div class="bubble"><div class="who"></div><div class="say"><b>5주차와 같은 규칙</b>콜백은 ISR 안에서 실행돼요. 플래그만 세우고 끝내고, main과 같이 쓰는 변수는 <code>volatile</code>로 선언해요. 빠지면 콜백은 불리는데 main이 영원히 대기해요.</div></div>
+  </section>
+
+  <!-- 08 문제 해결 -->
+  <section data-reveal>
+    <h2><span class="num">08</span>안 될 때 확인할 것</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>증상</th><th>가능한 원인</th><th>확인 · 조치</th></tr></thead>
+        <tbody>
+          <tr><td>ADC 값이 0 또는 최대값에 고정</td><td>PTA11 설정 또는 가변저항 연결 오류</td><td>ADC_POT0 / PTA11, ADC1_S10 설정 확인</td></tr>
+          <tr><td>값이 4095 초과, 전압 약 4배</td><td>분해능이 기본값 14-bit로 남음</td><td><code>Conversion resolution = RESOLUTION_12</code></td></tr>
+          <tr><td>값이 심하게 흔들림</td><td>하드웨어 평균 미적용, 입력·기준전압·배선 노이즈</td><td><code>AvgEn = TRUE</code> (MCAL은 <code>AdcNormalConvTimings</code>) 확인, 전원·GND 상태 확인</td></tr>
+          <tr><td>config / channel index / <code>AdcGroup_POT</code> 미정의</td><td>생성 심볼 이름 불일치</td><td>생성 헤더(<code>Adc_Sar_Ip_PBcfg.h</code>, <code>Adc_PBcfg.h</code>)의 실제 심볼로 교체</td></tr>
+          <tr><td>대기 while에서 멈춤, LCD 갱신 안 됨 (MCAL)</td><td>콜백이 호출되지 않음</td><td><code>EnableGroupNotification</code>, Normal Interrupt Enable, Group Notification, Platform IRQ 순서로 확인</td></tr>
+          <tr><td><code>undefined reference to Adc1_Callback</code></td><td>콜백 본체가 없거나 이름이 다름</td><td>main.c의 정의와 Config Tools 이름 확인</td></tr>
+          <tr><td>콜백은 불리는데 main이 계속 대기</td><td><code>volatile</code> 누락</td><td><code>AdcConvDone</code>을 <code>static volatile</code>로 선언</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="bubble"><div class="who"></div><div class="say"><b>이 장의 핵심</b>ADC 값을 읽는 것이 아니라, raw 값을 관찰하고 필터를 적용하고 표시값의 의미를 해석하는 데 있어요. 숫자는 센서·회로·기준전압·샘플링 조건·필터링의 결과예요.</div></div>
+  </section>
+
+  <section data-reveal>
+    <h2><span class="num">09</span>체크 퀴즈</h2>
+    <div class="widget" id="quiz"></div>
+  </section>
+</main>
+
+<script type="module" src="../assets/js/core.js"></script>
+<script type="module" src="../assets/js/stepper.js"></script>
+<script type="module" src="../assets/js/quiz.js"></script>
+<script type="module" src="w6.js"></script>
+</body>
+</html>

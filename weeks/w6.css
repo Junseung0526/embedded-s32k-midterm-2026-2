@@ -1,0 +1,48 @@
+/* w6 페이지에서만 쓰는 모양 */
+svg.plot { width: 100%; height: auto; display: block; font-family: var(--mono); margin: 8px 0; }
+svg.plot text { fill: var(--ink-2); font-size: 11px; }
+svg.plot .axis { stroke: var(--ink-2); stroke-width: 1; }
+svg.plot .ideal { fill: none; stroke: var(--ink-2); stroke-width: 1.2; stroke-dasharray: 4 3; }
+svg.plot .stairs { fill: none; stroke: var(--data); stroke-width: 2; }
+svg.plot .guide { stroke: var(--on); stroke-width: 1; stroke-dasharray: 3 3; }
+svg.plot .mark { fill: var(--on); }
+svg.plot .l-hw { fill: none; stroke: var(--data); stroke-width: 1.4; opacity: .85; }
+svg.plot .l-ma { fill: none; stroke: var(--on); stroke-width: 2.2; }
+
+.readout { font: 14px/1.7 var(--mono); margin: 12px 0 0; }
+.readout b { color: var(--on); font-weight: 600; }
+.readout.bad { color: var(--on); }
+.widget .row + .row { margin-top: 10px; }
+.widget .row > label { font: 13px var(--mono); color: var(--ink-2); min-width: 14ch; }
+label.check { display: inline-flex; gap: 6px; align-items: center; font: 13px var(--mono); color: var(--ink-2); min-width: 0; }
+
+.chain { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 14px 0; }
+.chain .arrow, .order .arrow { color: var(--ink-2); font-family: var(--mono); }
+.chip.bad { background: var(--on-soft); border-color: var(--on); color: var(--on); }
+
+.sar-t { font: 13px var(--mono); }
+.sar-t td, .sar-t th { white-space: nowrap; }
+.sar-t tr.wait td { color: var(--ink-2); opacity: .55; }
+.sar-t tr.cur td { background: var(--on-soft); }
+
+/* 이동 평균 Stepper 오른쪽 그림 */
+.buf { display: flex; flex-direction: column; gap: 4px; }
+.buf .slot { display: grid; grid-template-columns: 8ch 6ch 1fr; padding: 4px 8px; border: 1px dashed var(--line); border-radius: 3px; font: 12px var(--mono); color: var(--ink-2); transition: background .3s, color .3s; }
+.buf .slot.filled { background: var(--panel-2); border-style: solid; color: var(--ink); }
+.buf .slot.next { border-color: var(--on); }
+.buf .slot .p { color: var(--on); }
+.buf-info { margin-top: 8px; font: 12px/1.7 var(--mono); color: var(--ink-2); }
+.buf-info b { color: var(--on); font-weight: 600; }
+
+/* 14-bit 함정 LCD */
+.lcd2 { font: 15px/1.5 var(--mono); background: #9FB33A; color: #1E2A0A; padding: 8px 12px; border-radius: 3px; box-shadow: inset 0 0 0 3px #1E1F1C; letter-spacing: .08em; white-space: pre; width: fit-content; margin: 14px 0 0; max-width: 100%; overflow-x: auto; }
+
+.rules li { margin-bottom: 6px; }
+.isr-cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0; }
+.isr-cmp .good { color: var(--ok); }
+.isr-cmp .bad { color: var(--on); }
+@media (max-width: 760px) { .isr-cmp { grid-template-columns: 1fr; } }
+
+.order-label { font: 13px var(--mono); color: var(--ink-2); margin: 16px 0 6px; }
+.order { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; counter-reset: o; }
+.order .chip::before { counter-increment: o; content: counter(o); color: var(--ink-2); }

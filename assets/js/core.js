@@ -166,6 +166,7 @@ EV.PAGES = [
   ["w3-ipl-mcal.html", "W3", "GPIO, IPL과 MCAL"],
   ["w4-i2c-lcd.html", "W4", "I2C와 캐릭터 LCD"],
   ["w5-interrupt.html", "W5", "인터럽트 처리"],
+  ["w6-adc.html", "W6", "ADC와 이동 평균 필터"],
 ];
 
 // 주차 페이지 맨 아래: 이전 / 보드 허브 / 다음. 그리고 허브의 "이어서 보기"용으로 마지막 페이지를 기억
