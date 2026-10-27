@@ -269,7 +269,11 @@ main.page > section { scroll-margin-top: 24px; }
   .pagenav { grid-template-columns: 1fr 1fr; }
   .pagenav .hub { grid-column: 1 / -1; order: -1; }
 }
-@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+@media (prefers-reduced-motion: reduce) { html:not(.motion-ok) { scroll-behavior: auto; } }
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+  html:not(.motion-ok) *, html:not(.motion-ok) *::before, html:not(.motion-ok) *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
 }
+
+.motion-btn { font: 12px var(--mono); color: var(--ink-2); background: none; border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; cursor: pointer; margin-left: 12px; }
+.motion-btn:hover { color: var(--ink); border-color: var(--ink-2); }
+.motion-btn[aria-pressed="true"] { color: var(--on); border-color: var(--on); }

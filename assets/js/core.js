@@ -1,7 +1,9 @@
 // 모든 위젯이 쓰는 작은 도우미 모음. file://에서도 돌아가도록 ES module 대신 전역 EV 하나만 쓴다.
 window.EV = window.EV || {};
 
-EV.reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+// 시스템이 동작 줄이기여도 vt.js가 html.motion-ok를 붙였으면(사용자가 직접 켬) 애니메이션을 쓴다
+EV.osReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+EV.reducedMotion = EV.osReducedMotion && !document.documentElement.classList.contains("motion-ok");
 
 // EV.h("div", { class: "x", onclick: fn }, "텍스트", 자식요소...)
 EV.h = function (tag, props, ...children) {
@@ -231,6 +233,22 @@ function tocRail() {
   update();
 }
 
+// 시스템이 "동작 줄이기"일 때만 상단에 켜기/끄기 버튼을 둔다. 선택은 이 브라우저에만 저장하고 새로고침으로 적용한다.
+function motionToggle() {
+  if (!EV.osReducedMotion) return;
+  const bar = document.querySelector(".topbar");
+  if (!bar) return;
+  const on = document.documentElement.classList.contains("motion-ok");
+  (bar.lastElementChild || bar).append(EV.h("button", {
+    class: "motion-btn", type: "button", "aria-pressed": on,
+    title: "시스템이 '동작 줄이기'로 설정돼 있어요. 이 사이트의 애니메이션만 따로 켜거나 끌 수 있어요.",
+    onclick: () => {
+      try { on ? localStorage.removeItem("ev-motion") : localStorage.setItem("ev-motion", "1"); } catch (_) {}
+      location.reload();
+    },
+  }, on ? "애니메이션 끄기" : "애니메이션 켜기"));
+}
+
 // 사이트 안 페이지 이동: 화면이 살짝 사라진 뒤 이동하고, 도착 페이지는 떠오른다(vt.js).
 // 허브의 부품 클릭처럼 이미 다른 전환을 건 링크(defaultPrevented)는 건드리지 않는다.
 document.addEventListener("click", (e) => {
@@ -251,6 +269,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".bubble .who").forEach((w) => (w.innerHTML = EV.CHIP_SVG));
   pageNav();
   tocRail();
+  motionToggle();
   document.querySelectorAll(".tangle[data-bind]").forEach(EV.tangle);
   document.querySelectorAll(".xref[data-hl]").forEach(EV.xref);
 
