@@ -38,6 +38,12 @@
 #board #pLed.on .led-body { fill: var(--on); }
 #board #pLed.on .led-glow { opacity: .8; }
 
+#board .pot-body { fill: #3E3F3B; }
+#board .pot-knob { fill: #D9D7D1; stroke: #8E8C85; }
+#board .pot-slot { stroke: var(--on); stroke-width: 3; stroke-linecap: round; transition: transform .35s ease; transform-box: fill-box; transform-origin: 50% 100%; }
+#board #pPot:hover .pot-slot, #board #pPot:focus-visible .pot-slot, #board #pPot.hot .pot-slot { transform: rotate(120deg); }
+#board #pPot:focus-visible .pot-body { stroke: var(--on); stroke-width: 3; }
+
 #board .btn-base { fill: #3E3F3B; }
 #board .btn-cap { fill: #D9D7D1; stroke: #8E8C85; transition: transform .08s; transform-box: fill-box; transform-origin: center; }
 #board #pBtn.down .btn-cap { transform: scale(.86); }

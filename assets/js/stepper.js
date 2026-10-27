@@ -123,7 +123,7 @@ EV.stepper = function (root, opt) {
 
   function play() {
     if (index >= total) go(0);
-    playBtn.textContent = "⏸";
+    playBtn.innerHTML = '<i class="bars"></i>';
     playBtn.setAttribute("aria-label", "일시정지");
     timer = setInterval(next, EV.reducedMotion ? PLAY_MS * 1.5 : PLAY_MS);
     next();

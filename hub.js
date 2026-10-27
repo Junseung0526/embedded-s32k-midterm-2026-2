@@ -24,6 +24,7 @@
     pUart: "OpenSDA USB: printf가 LPUART6 → VCOM을 타고 PC로 나가는 길 → <b>1주차 UART</b>",
     pLed: "D13 빨간 LED (PTA29): 주소에 직접 써서 켜기 → <b>2주차 GPIO</b> (끝에서 3주차 IPL/MCAL로)",
     pLcd: "1602 LCD + PCF8574: SDA·SCL 두 선으로 글자 쓰기 → <b>4주차 I2C</b>",
+    pPot: "가변저항 ADC_POT0 (R393 → PTA11 = ADC1_S10): 돌린 전압을 숫자로 바꾸고 평균 내기 → <b>6주차 ADC</b>",
     pBtn: "SW5 (USER_SW0, PTB26): 눌러 보세요. 여기서 인터럽트 흐름이 재생돼요",
     pIrq: "인터럽트를 처음부터 끝까지 → <b>5주차 인터럽트</b>",
   };

@@ -122,6 +122,7 @@ input.hexin {
 .st-note { margin: 0 16px; padding: 12px 14px; background: var(--bg); border-radius: var(--r); min-height: 3.6em; border-left: 3px solid var(--on); }
 .st-ctrl { display: flex; align-items: center; gap: 8px; padding: 14px 16px; }
 .st-ctrl .play { min-width: 44px; background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.st-ctrl .play .bars { display: inline-block; width: 10px; height: 12px; vertical-align: -1px; background: linear-gradient(90deg, currentColor 0 3px, transparent 3px 7px, currentColor 7px 10px); }
 /* 예측 체크포인트 */
 .st-note.ask { border-left-color: var(--clk); }
 .st-note .ask-q { display: block; margin-bottom: 8px; }
