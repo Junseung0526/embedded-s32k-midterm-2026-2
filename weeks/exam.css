@@ -1,0 +1,63 @@
+/* exam 페이지: 주제 바 + 문제 카드 하나 */
+.exam-bar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; margin-bottom: 8px; }
+
+.ex-card { display: grid; gap: 16px; }
+.ex-prog { display: flex; gap: 4px; }
+.ex-seg { flex: 1; height: 8px; min-width: 0; padding: 0; border: 0; border-radius: 4px; background: var(--panel-2); cursor: pointer; }
+.ex-seg.ok { background: var(--ok); }
+.ex-seg.ng { background: var(--on); }
+.ex-seg.cur { outline: 2px solid var(--ink); outline-offset: 2px; }
+.ex-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font: 14px var(--mono); color: var(--ink-2); }
+.ex-score { margin-left: auto; }
+.ex-score b { color: var(--ink); }
+
+.ex-q { font-size: 19px; font-weight: 600; line-height: 1.6; margin: 0; word-break: keep-all; overflow-wrap: anywhere; }
+.ex-choices { display: grid; gap: 8px; }
+.ex-choice {
+  display: grid; grid-template-columns: 28px 1fr 24px; align-items: center; gap: 12px; text-align: left;
+  font: 16px var(--mono); padding: 12px 14px; min-height: 52px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer;
+  overflow-wrap: anywhere; transition: border-color .15s, background .15s;
+}
+.ex-choice:hover:not(:disabled) { border-color: var(--ink); background: var(--panel-2); }
+.ex-choice:focus-visible { outline: 2px solid var(--on); outline-offset: 2px; }
+.ex-choice:disabled { cursor: default; }
+.ex-choice kbd { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--line); font: 600 13px var(--mono); color: var(--ink-2); }
+.ex-choice .mark { font-weight: 700; text-align: center; }
+.ex-choice.right { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 18%, var(--bg)); }
+.ex-choice.right kbd { border-color: var(--ok); background: var(--ok); color: #fff; }
+.ex-choice.right .mark { color: var(--ok); }
+.ex-choice.wrong { border-color: var(--on); background: var(--on-soft); }
+.ex-choice.wrong kbd { border-color: var(--on); background: var(--on); color: #fff; }
+.ex-choice.wrong .mark { color: var(--on); }
+.ex-choice.dim { opacity: .55; }
+
+.ex-why { padding: 14px 16px; border-radius: 8px; border-left: 4px solid var(--ink-2); background: var(--bg); }
+.ex-why.ok { border-left-color: var(--ok); }
+.ex-why.ng { border-left-color: var(--on); }
+.ex-why b { display: block; font-size: 16px; margin-bottom: 6px; }
+.ex-why.ok b { color: var(--ok); }
+.ex-why.ng b { color: var(--on); }
+.ex-why p { margin: 4px 0 0; line-height: 1.65; }
+.ex-ans { font-family: var(--mono); font-weight: 600; }
+
+.ex-nav { display: flex; align-items: center; gap: 12px; padding-top: 4px; border-top: 1px solid var(--line); padding-top: 14px; }
+.ex-hint { flex: 1; text-align: center; font-size: 13px; color: var(--ink-2); }
+.ex-next.ready { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.key:disabled { opacity: .4; cursor: default; }
+
+.ex-end { display: grid; gap: 12px; }
+.ex-big { font: 700 44px var(--mono); margin: 0; }
+.ex-end p { margin: 0; }
+.ex-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.ex-list button { width: 100%; text-align: left; font: 14px var(--font); color: var(--ink); background: none; border: 0; border-radius: 6px; padding: 8px 10px; cursor: pointer; display: grid; grid-template-columns: 22px 1fr; gap: 8px; }
+.ex-list button:hover { background: var(--panel-2); }
+.ex-list .ok span:first-child { color: var(--ok); }
+.ex-list .ng span:first-child { color: var(--on); }
+
+@media (max-width: 640px) {
+  .ex-q { font-size: 17px; }
+  .ex-choice { grid-template-columns: 26px 1fr 20px; padding: 10px 12px; font-size: 15px; }
+  .ex-hint { display: none; }
+  .ex-nav { justify-content: space-between; }
+}

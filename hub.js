@@ -78,7 +78,33 @@
     }
   } catch (_) {}
 
-  document.querySelectorAll("#board a.part, a.hint-card, a.resume, .toc a").forEach((a) => {
+  // 주제별 이해도: weeks/exam.js가 저장한 최근 첫 시도 결과 (이 브라우저에만 저장)
+  {
+    const TOPICS = [["힌트", "힌트"], ["W1", "1주 UART"], ["W2", "2주 GPIO"], ["W3", "3주 IPL/MCAL"], ["W4", "4주 I2C"], ["W5", "5주 인터럽트"], ["W6", "6주 ADC"], ["서술", "서술형"]];
+    let st = {};
+    try { st = JSON.parse(localStorage.getItem("exam-stats-v1")) || {}; } catch (_) {}
+    const rows = TOPICS.map(([t, label]) => {
+      const r = st[t] || [];
+      return { t, label, n: r.length, pct: r.length ? Math.round((100 * r.reduce((a, b) => a + b, 0)) / r.length) : null };
+    });
+    const tried = rows.filter((r) => r.n >= 5);
+    if (rows.some((r) => r.n)) {
+      const weak = tried.sort((a, b) => a.pct - b.pct)[0];
+      $("mSum").textContent = weak ? `가장 약한 주제는 ${weak.label} (${weak.pct}%). 눌러서 바로 풀어 보세요.` : "주제마다 5문제 이상 풀면 약한 주제를 알려 줘요.";
+    }
+    for (const r of rows) {
+      const lv = r.pct == null ? "none" : r.n < 5 ? "few" : r.pct >= 80 ? "good" : r.pct >= 50 ? "mid" : "low";
+      const li = EV.h("li", { class: "m-" + lv },
+        EV.h("a", { href: `weeks/exam.html?t=${encodeURIComponent(r.t)}` },
+          EV.h("span", { class: "m-label" }, r.label),
+          EV.h("span", { class: "m-bar", role: "img", "aria-label": r.pct == null ? "아직 안 풀었어요" : `정답률 ${r.pct}%` },
+            EV.h("i", { style: `width:${r.pct || 0}%` })),
+          EV.h("span", { class: "m-num" }, r.pct == null ? "–" : `${r.pct}% · ${r.n}`)));
+      $("mList").append(li);
+    }
+  }
+
+  document.querySelectorAll("#board a.part, a.hint-card, a.resume, .toc a, .m-list a").forEach((a) => {
     a.addEventListener("click", (e) => {
       if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0 || EV.reducedMotion) return;
       e.preventDefault();

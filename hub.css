@@ -2,6 +2,7 @@
 :root { --pcb: #C9C7C1; --pcb-edge: #B3B1AA; --silk: #6E6C66; --metal: #A9AAA6; --chipc: #2B2C29; }
 @media (prefers-color-scheme: dark) { :root { --pcb: #363732; --pcb-edge: #4A4B45; --silk: #9A988F; --metal: #6F706B; --chipc: #141513; } }
 
+.hub-main { display: grid; gap: 24px; min-width: 0; }
 .hub { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 24px; align-items: start; }
 @media (max-width: 900px) { .hub { grid-template-columns: minmax(0, 1fr); } }
 .board-wrap { margin: 0; }
@@ -108,3 +109,20 @@ body:has(.board-wrap.diving) { overflow: hidden; } /* 확대 중 가로 스크�
 .toc .t { font-size: 18px; font-weight: 600; }
 .toc .t small { display: block; font-size: 14px; font-weight: 400; color: var(--ink-2); margin-top: 2px; }
 .toc .go { font-family: var(--mono); font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+
+/* 주제별 이해도 (예상문제 결과) */
+.mastery { padding: 18px 22px; border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); }
+.mastery h3 { margin: 0 0 4px; font-size: 18px; }
+.mastery h3 small { font: 12px var(--mono); color: var(--ink-2); font-weight: 400; margin-left: 6px; }
+.m-sum { margin: 0 0 10px; font-size: 14px; color: var(--ink-2); }
+.m-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(4, auto); grid-auto-flow: column; gap: 4px 28px; }
+@media (max-width: 640px) { .m-list { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-auto-flow: row; } }
+.m-list a { display: grid; grid-template-columns: 104px 1fr 76px; align-items: center; gap: 12px; padding: 7px 8px; margin: 0 -8px; border-radius: 5px; color: var(--ink); text-decoration: none; font-size: 14px; }
+.m-list a:hover { background: var(--panel-2); }
+.m-bar { height: 8px; border-radius: 4px; background: var(--panel-2); overflow: hidden; }
+.m-bar i { display: block; height: 100%; border-radius: 4px; background: var(--ink-2); }
+.m-good .m-bar i { background: var(--ok); }
+.m-mid .m-bar i { background: var(--clk); }
+.m-low .m-bar i { background: var(--on); }
+.m-num { font: 12px var(--mono); color: var(--ink-2); text-align: right; }
+.m-low .m-num { color: var(--on); }

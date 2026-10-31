@@ -91,7 +91,7 @@ export const GENS = [
   () => {
     const P = pick(["A", "B"]), n = rint(0, 31), H = n >= 16 ? "H" : "L", O = H === "H" ? "L" : "H";
     return mc("W3", `IPL Siul2_Dio_Ip_WritePin()으로 PT${P}${n}에 쓸 때 (Half, 핀 번호)는?`, `PT${P}_${H}_HALF, ${n % 16}U`,
-      [`PT${P}_${O}_HALF, ${n % 16}U`, `PT${P}_${H}_HALF, ${n}U`, `PT${P}_${O}_HALF, ${n}U`, `PT${P}_${H}_HALF, ${(n % 16) + 1}U`],
+      [`PT${P}_${O}_HALF, ${n % 16}U`, `PT${P}_${H}_HALF, ${n}U`, `PT${P}_${O}_HALF, ${n}U`, `PT${P}_${H}_HALF, ${(n % 16) + 1}U`, `PT${P}_${H}_HALF, ${(n % 16) + 16}U`, `PT${P}_${O}_HALF, ${(n % 16) + 1}U`],
       `0~15번은 Low Half, 16~31번은 High Half예요. ${n}은 ${H === "H" ? "High" : "Low"} Half, 상대 번호 ${n} − ${n >= 16 ? 16 : 0} = ${n % 16}.`);
   },
   () => {
