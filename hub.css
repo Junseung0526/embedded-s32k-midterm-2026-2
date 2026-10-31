@@ -92,6 +92,8 @@ body:has(.board-wrap.diving) { overflow: hidden; } /* 확대 중 가로 스크�
 .hint-card small { color: var(--ink-2); font-size: 14px; }
 .hint-card .go { font: 13px var(--mono); color: var(--ink-2); margin-top: 6px; }
 .hint-card:hover .go { color: var(--on); }
+.easy-card { border-top-color: var(--ok); }
+.easy-card:hover .go { color: var(--ok); }
 .map { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 0; font-size: 14px; }
 .map dt { font-family: var(--mono); color: var(--ink-2); font-size: 13px; }
 .map dd { margin: 0; }

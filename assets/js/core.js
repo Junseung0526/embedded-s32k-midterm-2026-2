@@ -186,12 +186,30 @@ EV.PAGES = [
   ["w6-adc.html", "W6", "ADC와 이동 평균 필터"],
 ];
 
+// 쉬운 요약판(easy/)의 챕터 id. 요약 N → 이 페이지 → 요약 N+1 순서로 오간다
+EV.EASY = { "hints.html": "hint", "w1-uart.html": "w1", "w2-gpio-bare.html": "w2", "w3-ipl-mcal.html": "w3", "w4-i2c-lcd.html": "w4", "w5-interrupt.html": "w5", "w6-adc.html": "w6" };
+
+// 주차 페이지 맨 위: 5분 요약으로 가는 한 줄. 맨 아래: 다음 주차 요약(마지막이면 마무리 퀴즈)
+function easyLinks(i) {
+  const easy = (id) => "../easy/index.html#/" + id;
+  const [file, no] = EV.PAGES[i];
+  const hero = document.querySelector("main.page > .hero");
+  if (hero) hero.append(EV.h("a", { class: "easy-top", href: easy(EV.EASY[file]) }, "처음이면 ", EV.h("b", {}, `${no} 5분 요약`), "부터 보고 와요 →"));
+  const next = EV.PAGES[i + 1];
+  document.querySelector("main.page").append(next
+    ? EV.h("a", { class: "easy-next", href: easy(EV.EASY[next[0]]) },
+        EV.h("small", {}, `${no} 끝! 다음 주차도 감부터 잡기`), EV.h("b", {}, `${next[1]} · ${next[2]} 5분 요약 →`))
+    : EV.h("a", { class: "easy-next", href: easy("nums") },
+        EV.h("small", {}, "마지막 주차까지 끝! 시험 직전 점검"), EV.h("b", {}, "꼭 외울 숫자 12개 · 함정 OX 퀴즈 →")));
+}
+
 // 주차 페이지 맨 아래: 이전 / 보드 허브 / 다음. 그리고 허브의 "이어서 보기"용으로 마지막 페이지를 기억
 function pageNav() {
   if (!location.pathname.includes("/weeks/")) return;
   const i = EV.PAGES.findIndex((p) => p[0] === location.pathname.split("/").pop());
   if (i < 0) return;
   try { localStorage.setItem("ev-last", JSON.stringify(EV.PAGES[i])); } catch (_) {}
+  easyLinks(i);
   const link = (p, dir) =>
     p ? EV.h("a", { href: p[0], class: "pn " + dir }, EV.h("small", {}, dir === "prev" ? "← 이전" : "다음 →"), `${p[1]} · ${p[2]}`) : EV.h("span");
   document.querySelector("main.page").append(

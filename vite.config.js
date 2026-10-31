@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { defineConfig } from "vite";
 
-const pages = ["index", "weeks/hints", "weeks/w1-uart", "weeks/w2-gpio-bare", "weeks/w3-ipl-mcal", "weeks/w4-i2c-lcd", "weeks/w5-interrupt", "weeks/w6-adc"];
+const pages = ["index", "easy/index", "weeks/hints", "weeks/w1-uart", "weeks/w2-gpio-bare", "weeks/w3-ipl-mcal", "weeks/w4-i2c-lcd", "weeks/w5-interrupt", "weeks/w6-adc"];
 
 // vt.js는 첫 화면이 그려지기 전에 html.dive-in을 붙여야 해서, 모듈(defer)이 아니라 <head>에 인라인으로 넣는다.
 const inlineVt = {

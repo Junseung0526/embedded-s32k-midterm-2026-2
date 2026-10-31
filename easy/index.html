@@ -1,0 +1,850 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>임베디드 중간고사, 진짜 쉽게</title>
+<style>
+:root {
+  --bg: #F6F4EF; --card: #FFFFFF; --ink: #1E1E1C; --dim: #6B6A65; --line: #E2DFD8;
+  --red: #E8412C; --red-soft: #FDE9E5; --teal: #1F8A8A; --teal-soft: #E1F2F1;
+  --yellow: #E9A23B; --yellow-soft: #FCF1DF; --green: #2F7D4F; --green-soft: #E3F1E8;
+  --mono: "D2Coding", "SF Mono", Menlo, Consolas, monospace;
+  --r: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #171816; --card: #22231F; --ink: #ECEAE4; --dim: #9C9A93; --line: #36372F;
+    --red-soft: #3A1F1A; --teal-soft: #16302F; --yellow-soft: #352A17; --green-soft: #1B2F22;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 17px/1.65 "Pretendard Variable", "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  word-break: keep-all;
+}
+a { color: inherit; }
+code, .mono { font-family: var(--mono); font-size: .92em; }
+code { background: var(--yellow-soft); padding: 1px 6px; border-radius: 6px; }
+button { font: inherit; cursor: pointer; }
+
+header {
+  position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(8px); border-bottom: 1px solid var(--line);
+}
+.bar { max-width: 860px; margin: 0 auto; padding: 10px 20px; display: flex; align-items: center; gap: 14px; }
+.bar .home { font-weight: 800; text-decoration: none; white-space: nowrap; }
+.prog { flex: 1; height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; }
+.prog i { display: block; height: 100%; width: 0; background: var(--green); transition: width .4s; }
+.bar small { color: var(--dim); white-space: nowrap; }
+.bar .hub { font-size: 14px; color: var(--dim); text-decoration: none; white-space: nowrap; }
+.bar .hub:hover { color: var(--ink); }
+@media (max-width: 560px) { .bar .hub { display: none; } }
+
+/* 흐름: 요약 → 원래 페이지 → 다음 요약 */
+.loop { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 22px; font-size: 15px; }
+.loop span { background: var(--card); border: 1px solid var(--line); border-radius: 99px; padding: 4px 12px; }
+.loop span.me { background: var(--ink); color: var(--bg); border-color: var(--ink); font-weight: 700; }
+.loop i { color: var(--dim); font-style: normal; }
+.cont { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; background: var(--ink); color: var(--bg); border-radius: var(--r); padding: 18px 22px; margin-bottom: 18px; text-decoration: none; }
+.cont b { font-size: 20px; }
+.cont small { display: block; opacity: .7; }
+.cont .go { font-weight: 800; white-space: nowrap; }
+.nextstep { border: 2px solid var(--ink); }
+.nextstep p { margin: 0 0 14px; }
+.nextstep .row { margin: 0; }
+.nextstep .btn { text-decoration: none; }
+.nextstep .btn.main { font-size: 18px; padding: 10px 18px; }
+.back { display: inline-block; margin-top: 14px; color: var(--dim); font-size: 15px; }
+
+main { max-width: 860px; margin: 0 auto; padding: 28px 20px 80px; }
+h1 { font-size: clamp(28px, 6vw, 42px); line-height: 1.25; margin: 8px 0 10px; letter-spacing: -.02em; }
+h2 { font-size: 22px; margin: 0 0 12px; }
+.lede { color: var(--dim); font-size: 18px; margin: 0 0 28px; }
+
+/* 홈 카드 */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+.ch {
+  display: block; text-decoration: none; background: var(--card); border: 2px solid var(--line);
+  border-radius: var(--r); padding: 18px; position: relative; transition: transform .15s, border-color .15s;
+}
+.ch:hover { transform: translateY(-3px); border-color: var(--ink); }
+.ch .wk { font-size: 13px; font-weight: 700; color: var(--red); }
+.ch b { display: block; font-size: 19px; margin: 2px 0 6px; }
+.ch p { margin: 0; color: var(--dim); font-size: 15px; }
+.ch.done::after {
+  content: "✓ 봤어요"; position: absolute; top: 14px; right: 14px; font-size: 12px; font-weight: 700;
+  color: var(--green); background: var(--green-soft); padding: 2px 8px; border-radius: 99px;
+}
+.ch.special { border-style: dashed; }
+.howto { margin-top: 30px; background: var(--card); border-radius: var(--r); padding: 18px 20px; border: 1px solid var(--line); }
+.howto ol { margin: 6px 0 0; padding-left: 22px; }
+
+/* 챕터 */
+.kicker { font-weight: 700; color: var(--red); font-size: 14px; }
+.box { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 20px 22px; margin: 18px 0; }
+.box h2 .n {
+  display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;
+  background: var(--ink); color: var(--bg); font-size: 15px; margin-right: 8px; vertical-align: 2px;
+}
+.oneline { font-size: clamp(20px, 4vw, 26px); font-weight: 800; line-height: 1.45; margin: 0; }
+.why { margin: 12px 0 0; color: var(--dim); }
+
+/* 모르는 말 사전 (접힘) */
+.words summary { list-style: none; cursor: pointer; }
+.words summary::-webkit-details-marker { display: none; }
+.words summary h2 { display: inline; margin: 0; }
+.words summary .more { display: block; color: var(--teal); font-size: 15px; font-weight: 700; margin-top: 6px; }
+.words[open] summary .more { display: none; }
+.words dl { display: grid; grid-template-columns: max-content 1fr; gap: 8px 16px; margin: 14px 0 0; }
+.words dt { font-weight: 800; }
+.words dd { margin: 0; color: var(--dim); }
+@media (max-width: 560px) { .words dl { grid-template-columns: 1fr; gap: 2px; } .words dd { margin-bottom: 8px; } }
+
+/* 장난감 안내 + 덤(접힘) */
+.steps { background: var(--teal-soft); border-radius: 12px; padding: 10px 14px; margin: -4px 0 14px; font-size: 15px; }
+.steps .look { display: block; margin-top: 4px; font-weight: 700; }
+.extra { margin-top: 20px; border-top: 1px dashed var(--line); padding-top: 12px; }
+.extra summary { cursor: pointer; font-weight: 700; color: var(--teal); }
+.analogy { background: var(--yellow-soft); border: none; }
+.analogy p { margin: 0; }
+.points { list-style: none; padding: 0; margin: 0; counter-reset: p; }
+.points li { counter-increment: p; position: relative; padding: 10px 0 10px 44px; border-top: 1px dashed var(--line); }
+.points li:first-child { border-top: 0; }
+.points li::before {
+  content: counter(p); position: absolute; left: 0; top: 10px; width: 30px; height: 30px; border-radius: 9px;
+  background: var(--teal-soft); color: var(--teal); font-weight: 800; display: grid; place-items: center;
+}
+
+/* 장난감 공통 */
+.toy { border: 2px solid var(--teal); }
+.toy .hint { color: var(--dim); font-size: 15px; margin: -4px 0 14px; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 10px 0; }
+.btn {
+  border: 2px solid var(--ink); background: var(--card); color: var(--ink); border-radius: 10px;
+  padding: 7px 14px; font-weight: 700;
+}
+.btn:hover { background: var(--ink); color: var(--bg); }
+.btn.main { background: var(--ink); color: var(--bg); }
+.btn.sel { background: var(--teal); border-color: var(--teal); color: #fff; }
+input[type=range] { flex: 1; min-width: 160px; accent-color: var(--teal); }
+input[type=text] {
+  font: 700 20px var(--mono); width: 90px; padding: 6px 10px; border-radius: 10px;
+  border: 2px solid var(--line); background: var(--bg); color: var(--ink); text-align: center;
+}
+.out {
+  background: var(--bg); border-radius: 12px; padding: 14px 16px; margin-top: 12px; font-size: 16px;
+}
+.out .big { font: 800 26px var(--mono); }
+.ok { color: var(--green); font-weight: 800; }
+.bad { color: var(--red); font-weight: 800; }
+.tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 99px; background: var(--line); margin-right: 4px; }
+
+.bits { display: flex; gap: 6px; flex-wrap: wrap; }
+.bit {
+  width: 46px; text-align: center; border-radius: 10px; border: 2px solid var(--line); background: var(--card);
+  padding: 4px 0; user-select: none;
+}
+.bit small { display: block; font-size: 11px; color: var(--dim); }
+.bit b { font: 800 22px var(--mono); }
+.bit.on { background: var(--red); border-color: var(--red); color: #fff; }
+.bit.on small { color: #ffd9d2; }
+.bit.pick { outline: 3px solid var(--teal); outline-offset: 2px; }
+.bit.click { cursor: pointer; }
+
+/* UART 파형 */
+.wave { display: flex; overflow-x: auto; padding-bottom: 4px; }
+.wave div { flex: 0 0 48px; text-align: center; font-size: 12px; }
+.wave .ln { height: 44px; position: relative; border-left: 1px dotted var(--line); }
+.wave .ln::after { content: ""; position: absolute; left: 0; right: 0; height: 3px; background: var(--teal); }
+.wave .hi .ln::after { top: 4px; } .wave .lo .ln::after { bottom: 4px; }
+.wave .st .ln::after, .wave .sp .ln::after { background: var(--red); }
+.wave .v { font: 800 18px var(--mono); }
+
+/* GPDO 묶음 */
+.cells { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; max-width: 460px; }
+.cell { border: 2px solid var(--line); border-radius: 10px; padding: 6px; text-align: center; font-size: 13px; background: var(--card); }
+.cell b { display: block; font: 800 16px var(--mono); }
+.cell.me { border-color: var(--red); background: var(--red-soft); }
+.cell.wrong { border-style: dashed; border-color: var(--dim); }
+.led { display: inline-block; width: 22px; height: 22px; border-radius: 50%; background: #5a2a24; vertical-align: -5px; margin-right: 6px; transition: .2s; }
+.led.on { background: var(--red); box-shadow: 0 0 16px 4px var(--red); }
+
+/* 흐름 */
+.flow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.flow span { padding: 6px 10px; border-radius: 10px; background: var(--bg); border: 2px solid var(--line); font-size: 14px; font-weight: 700; transition: .2s; }
+.flow span.lit { background: var(--teal); border-color: var(--teal); color: #fff; transform: scale(1.06); }
+.flow i { color: var(--dim); font-style: normal; }
+
+/* 분류 게임 */
+.sort { display: grid; gap: 8px; }
+.sort .item { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--bg); border-radius: 10px; padding: 8px 12px; flex-wrap: wrap; }
+.sort .item .res { font-size: 14px; width: 100%; }
+
+/* LCD */
+.lcd { display: inline-block; background: #9DBB3B; color: #1d2a06; font: 700 20px var(--mono); padding: 10px 14px; border-radius: 6px; border: 6px solid #2a5a1a; white-space: pre; line-height: 1.3; }
+
+/* 함정 카드 */
+.traps { display: grid; gap: 10px; }
+.trap { border: 2px solid var(--line); border-radius: 12px; padding: 14px 16px; background: var(--card); }
+.trap .q { font-weight: 700; }
+.trap .ans { display: none; margin-top: 8px; font-size: 15px; }
+.trap.open .ans { display: block; }
+.trap .ox { display: flex; gap: 8px; margin-top: 10px; }
+.trap .ox button { width: 54px; height: 40px; border-radius: 10px; border: 2px solid var(--line); background: var(--bg); color: var(--ink); font-weight: 800; font-size: 18px; }
+.trap.right { border-color: var(--green); }
+.trap.wrong { border-color: var(--red); }
+
+.nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 28px; flex-wrap: wrap; }
+
+/* 숫자 카드 */
+.nums { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.num { background: var(--card); border: 2px solid var(--line); border-radius: 12px; padding: 14px; cursor: pointer; min-height: 110px; }
+.num .k { font-size: 14px; color: var(--dim); }
+.num .v { font: 800 22px var(--mono); margin: 4px 0; visibility: hidden; }
+.num .w { font-size: 14px; visibility: hidden; }
+.num.open .v, .num.open .w { visibility: visible; }
+.num:not(.open) .k::after { content: "  · 눌러서 보기"; color: var(--teal); font-weight: 700; }
+
+/* 퀴즈 */
+.quiz { text-align: center; }
+.quiz .q { font-size: clamp(20px, 4vw, 26px); font-weight: 800; margin: 20px 0; min-height: 3em; }
+.quiz .ox { display: flex; gap: 14px; justify-content: center; }
+.quiz .ox button { width: 110px; height: 80px; font-size: 40px; font-weight: 900; border-radius: 18px; border: 3px solid var(--ink); background: var(--card); color: var(--ink); }
+.quiz .ox button:hover { background: var(--ink); color: var(--bg); }
+.quiz .why { margin: 18px auto 0; max-width: 560px; min-height: 4em; }
+.score { font-size: 15px; color: var(--dim); }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <a class="home" href="#/">임베디드 쉽게</a>
+    <div class="prog" title="본 챕터 비율"><i id="progBar"></i></div>
+    <small id="progTxt">0 / 7</small>
+    <a class="hub" href="../index.html">자세히 보는 보드 허브 →</a>
+  </div>
+</header>
+<main id="app"></main>
+
+<script>
+/* ---------- 도우미 ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const hex = (v, d = 2) => "0x" + (v >>> 0).toString(16).toUpperCase().padStart(d, "0");
+const bin = (v, d = 8) => (v >>> 0).toString(2).padStart(d, "0");
+const DONE_KEY = "embedded-easy-done";
+const done = new Set(JSON.parse(localStorage.getItem(DONE_KEY) || "[]"));
+const saveDone = () => localStorage.setItem(DONE_KEY, JSON.stringify([...done]));
+
+/* ---------- 내용 ---------- */
+const CH = [
+  {
+    id: "hint", wk: "교수님 힌트", title: "비트 연산 · 포인터 · volatile",
+    card: "레지스터 스위치 하나만 콕 집어서 켜고 끄는 법",
+    why: "MCU를 움직이는 건 결국 <b>정해진 주소에 있는 숫자를 바꾸는 일</b>이에요. 그 숫자 중 <b>원하는 한 자리만</b> 바꾸는 기술이 비트 연산이라 2~6주차 코드 전부에 나와요. 시험에도 꼭 나와요.",
+    one: "숫자 안의 0/1 한 칸만 골라서 켜고 끄는 법이에요.",
+    ana: "전등 스위치 8개가 한 줄로 붙은 판이 있어요. 다른 스위치는 그대로 두고 <b>3번만</b> 켜고 싶을 때 쓰는 방법이 비트 연산이에요.",
+    pts: [
+      "켜기 <code>|=</code>, 끄기 <code>&= ~</code>, 뒤집기 <code>^=</code>, 확인 <code>&</code>. 늘 <code>(1U &lt;&lt; n)</code>(n번 칸만 1인 숫자)과 같이 써요.",
+      "구조체 멤버는 하나에 <b>4바이트</b>씩 뒤로 가요. 3번째면 3 × 4 = 12 = 16진수 <b>0x0C</b>. (0x12라고 쓰면 오답)",
+      "하드웨어나 인터럽트가 바꾸는 변수엔 <code>volatile</code>을 붙여요. \"매번 진짜 값을 다시 읽어\"라는 뜻이에요.",
+    ],
+    words: [
+      ["비트", "0 또는 1 한 칸. 8칸이 모이면 1바이트."],
+      ["레지스터", "하드웨어를 조종하는 특별한 메모리 칸. 여기에 숫자를 쓰면 하드웨어가 움직여요."],
+      ["마스크", "건드릴 칸만 1로 표시한 숫자. <code>1U &lt;&lt; 3</code> = 00001000."],
+      ["16진수 (0x)", "숫자를 0~9, A~F로 쓰는 방법. 0x0C = 12, 0x10 = 16."],
+      ["포인터", "주소를 담는 변수. 앞에 <code>*</code>를 붙이면 그 주소로 찾아가요."],
+      ["volatile", "컴파일러에게 \"이 값은 몰래 바뀔 수 있으니 매번 새로 읽어\"라고 알려 주는 말."],
+      ["ISR", "인터럽트가 오면 자동으로 실행되는 함수 (5주차)."],
+    ],
+    toy: "bits",
+    traps: [
+      ["<code>1 & 2</code>와 <code>1 && 2</code>의 결과는 같다.", false, "1 & 2는 칸마다 AND라 0, 1 && 2는 \"둘 다 참?\"이라 1이에요."],
+      ["구조체 첫 주소가 0x10002000이면 <code>msrstart->v3</code>은 0x10002012다.", false, "3번째 칸 = 3 × 4 = 12바이트 = 16진수 0x0C → 0x1000200C."],
+      ["<code>REG & 1U &lt;&lt; n != 0</code>은 괄호 없이 써도 의도대로 동작한다.", false, "!=가 &보다 먼저 계산돼요. 항상 ((REG & (1U &lt;&lt; n)) != 0)처럼 감싸요."],
+      ["volatile이 없으면 ISR이 바꾼 flag를 main 루프가 못 알아챌 수 있다.", true, "컴파일러가 flag를 CPU 레지스터에 복사해 두고 그것만 다시 읽기 때문이에요."],
+    ],
+  },
+  {
+    id: "w1", wk: "1주차", title: "S32K3 개요와 UART",
+    card: "printf 한 줄이 선을 타고 PC 화면까지 가는 길",
+    why: "보드에는 화면이 없어서 프로그램이 제대로 도는지 볼 방법이 없어요. 그래서 <b>보드가 PC로 글자를 보내게</b> 만들어요. 이게 되면 printf로 값을 찍어 보며 디버깅할 수 있어요.<br>결과물: PC 터미널(PuTTY)에 글자가 찍혀요.",
+    one: "보드가 USB 선을 통해 PC 화면에 글자를 보내게 만들어요.",
+    ana: "모스 부호처럼 선 하나로 '높다 / 낮다'를 차례로 보내 글자를 전달해요. 박자를 같이 보내지 않으니 양쪽이 <b>\"1초에 115200칸\"</b>이라고 속도를 미리 약속해요.",
+    pts: [
+      "준비 순서: <b>클럭(심장 박동) → 핀 → UART → printf</b>. 클럭은 안정될 때까지(PLL Lock) 기다렸다가 써요.",
+      "글자 하나 = 시작 1칸 + 데이터 8칸 + 끝 1칸 = <b>10칸</b>. 데이터는 <b>작은 자리(LSB)부터</b> 보내요.",
+      "PC와 연결된 건 <b>LPUART6</b> (PTA16 보내기 / PTA15 받기). LPUART0이 아니에요.",
+    ],
+    words: [
+      ["UART", "선 2개(보내기 / 받기)로 글자를 주고받는 가장 단순한 통신."],
+      ["baud rate", "1초에 몇 칸 보내는지. 실습 값은 115200."],
+      ["클럭", "칩의 심장 박동. 모든 부품이 이 박자에 맞춰 움직여요."],
+      ["PLL", "느린 클럭을 빠르게 뻥튀기하는 장치. 안정(Lock)될 때까지 기다려야 해요."],
+      ["LSB / MSB", "숫자의 가장 작은 자리 / 가장 큰 자리."],
+      ["_write()", "printf가 글자를 내보낼 때 부르는 함수. 이걸 직접 만들어 UART로 보내요."],
+      ["PuTTY", "보드가 보낸 글자를 PC에서 보여 주는 프로그램."],
+    ],
+    toy: "uart",
+    traps: [
+      ["UART는 클럭 선이 따로 있어서 속도를 미리 맞출 필요가 없다.", false, "UART는 비동기라 클럭 선이 없어요. 그래서 baud rate를 미리 약속해요."],
+      ["UART는 데이터의 MSB(가장 큰 비트)부터 보낸다.", false, "LSB(가장 작은 비트)부터 보내요."],
+      ["보드 VCOM으로 출력하려면 LPUART0 / PTA8, PTA9로 설정한다.", false, "VCOM은 LPUART6(PTA16 TX, PTA15 RX)에 연결돼 있어요."],
+      ["PLL은 Lock 되기 전에 클럭을 나눠 주면 안 된다.", true, "Lock 전에 분배하면 불안정한 클럭이 퍼져서 출력이 없거나 HardFault가 나요."],
+      ["<code>_write()</code>에 ptr == NULL이 들어오면 -1을 반환한다.", false, "잘못된 인자는 0, 송신 실패가 -1이에요."],
+    ],
+  },
+  {
+    id: "w2", wk: "2주차", title: "GPIO, 주소에 직접 쓰기",
+    card: "정해진 주소에 숫자 하나 쓰면 LED가 켜진다",
+    why: "보통은 드라이버 함수가 LED를 켜 주지만, 속에서 실제로 일어나는 일은 <b>정해진 주소에 숫자 쓰기</b> 하나예요. 맨손으로 한 번 해 봐야 3주차부터 드라이버가 뭘 대신해 주는지 보여요.<br>결과물: 보드의 빨간 LED(D13)가 켜져요.",
+    one: "특정 주소에 1을 쓰면 LED가 켜져요. 그게 전부예요.",
+    ana: "건물의 호수(주소)마다 하는 일이 달라요. 어떤 방은 쪽지를 보관만 하고(메모리), 어떤 방은 쪽지를 받으면 <b>불을 켜요</b>(레지스터). 쪽지를 넣는 방법은 똑같아요.",
+    pts: [
+      "할 일은 두 개: ① <b>MSCR</b>에 \"이 핀은 출력이야\"라고 쓰고 ② <b>GPDO</b>에 1을 써서 켜요.",
+      "GPDO 주소가 함정이에요. 4개씩 묶음 안에서 <b>순서가 거꾸로</b>라, 29번은 0x4029131D가 아니라 <b>0x4029131E</b>.",
+      "D13 LED는 <b>1 = 켜짐</b>(Active High). 레지스터 주소는 <code>volatile</code>로 감싸요.",
+    ],
+    words: [
+      ["GPIO", "켜고(1) 끄는(0) 것만 하는 단순한 핀."],
+      ["PTA29", "포트 A의 29번 핀. 빨간 LED D13이 여기 붙어 있어요."],
+      ["MSCR", "핀 설정 칸. 이 핀을 입력 / 출력 / 다른 기능 중 뭘로 쓸지 정해요."],
+      ["GPDO", "출력 값 칸. 1을 쓰면 핀이 HIGH가 돼요."],
+      ["Memory-Mapped I/O", "하드웨어를 메모리 주소처럼 다루는 방식. 주소에 쓰면 하드웨어가 움직여요."],
+      ["Active High", "1을 쓰면 켜지는 방식. 반대(0이면 켜짐)는 Active Low."],
+    ],
+    toy: "gpdo",
+    traps: [
+      ["GPDO29의 주소는 0x40291300 + 29 = 0x4029131D다.", false, "4개 묶음 안에서 거꾸로라서 0x4029131E예요."],
+      ["MSCR 번호와 GPIO 번호는 항상 같다.", false, "PTA29는 우연히 둘 다 29예요. 항상 IOMUX 표에서 따로 확인해요."],
+      ["출력으로 바꾸자마자 Off를 먼저 쓰는 건 LED가 잠깐 깜빡이는 글리치를 막기 위해서다.", true, "전원 직후 떠 있는 핀 때문에 생기는 깜빡임을 막아요."],
+      ["Active High LED는 0을 쓰면 켜진다.", false, "Active High는 1 = 켜짐이에요. 0 = 켜짐은 Active Low예요."],
+    ],
+  },
+  {
+    id: "w3", wk: "3주차", title: "IPL과 MCAL",
+    card: "같은 LED를 세 가지 높이(Bare · IPL · MCAL)에서 켜기",
+    why: "2주차처럼 주소를 외워서 쓰면, 칩이 바뀔 때마다 코드를 다 갈아엎어야 해요. 그래서 <b>미리 만들어 둔 드라이버 함수</b>로 같은 LED를 켜 보고, 뭐가 편해지는지 비교해요.<br>결과물: 같은 LED를 세 가지 방법으로 켜요.",
+    one: "주소를 직접 쓰던 걸, 남이 만들어 둔 함수로 바꿔 써 봐요.",
+    ana: "Bare = 엔진을 직접 만지기, IPL = 그 차 전용 리모컨, MCAL = 어느 차에나 있는 핸들. 위로 갈수록 <b>차를 바꿔도 운전법이 같아요</b>.",
+    pts: [
+      "IPL은 32개 핀을 반으로 나눠요. PTA29 → <b>위쪽 반(PTA_H_HALF)의 13번</b> (29 − 16).",
+      "MCAL은 일을 둘로 나눠요. <b>Port</b> = 시작할 때 핀 설정, <b>Dio</b> = 실행 중에 켜고 끄기.",
+      "자동 생성된 파일은 직접 고치지 말고, Config Tools에서 고친 뒤 <b>[Update Code]</b>.",
+    ],
+    words: [
+      ["Bare-metal", "드라이버 없이 레지스터 주소에 직접 쓰는 방식 (2주차)."],
+      ["IPL", "NXP가 이 칩 전용으로 만든 드라이버 함수 모음."],
+      ["MCAL", "자동차 업계 표준(AUTOSAR) 모양의 드라이버. 칩이 달라도 함수 이름이 같아요."],
+      ["추상화", "하드웨어 세부 사항을 한 곳에 모아서, 나머지 코드는 몰라도 되게 하는 것."],
+      ["Port / Dio", "MCAL 모듈 이름. Port = 핀 설정, Dio = 핀 값 읽기 / 쓰기."],
+      ["Config Tools", "설정을 클릭으로 고르면 코드를 자동으로 만들어 주는 프로그램."],
+    ],
+    toy: "half",
+    traps: [
+      ["<code>Siul2_Dio_Ip_WritePin()</code>에 PTA29의 핀 번호 29U를 그대로 넣는다.", false, "PTA_H_HALF와 상대 번호 13U(29 − 16)를 줘요."],
+      ["핀 방향(Output)과 Mux는 <code>Dio_Init()</code>이 설정한다.", false, "방향과 Mux는 Port(Port_Init) 담당이에요. Dio는 High/Low만 해요."],
+      ["식별자 에러가 나면 Dio_Cfg.h를 직접 열어 고친다.", false, "다음 코드 생성 때 덮어써져요. Config Tools에서 고치고 Update Code."],
+      ["MCAL의 .text가 IPL보다 크니까 MCAL이 더 나쁜 방식이다.", false, "크기만으로 판단하면 안 돼요. 표준화와 기능안전 이득이 더 커요."],
+      ["<code>Dio_FlipChannel</code> 링크 에러는 DioFlipChannelApi를 켜고 Update Code를 안 해서 생길 수 있다.", true, "API를 STD_ON으로 켜야 함수가 생성돼요."],
+    ],
+  },
+  {
+    id: "w4", wk: "4주차", title: "I2C와 캐릭터 LCD",
+    card: "선 두 개에 여러 장치를 매달고, 주소로 불러서 글자 쓰기",
+    why: "LCD 같은 부품을 핀 여러 개로 일일이 연결하면 핀이 금방 모자라요. I2C는 <b>선 두 개</b>에 여러 부품을 매달고 <b>번호(주소)로 골라서</b> 말을 걸어요.<br>결과물: 16×2 LCD에 글자가 나와요.",
+    one: "선 두 개로 LCD에 말을 걸어서 글자를 띄워요.",
+    ana: "교실 출석 부르기예요. 선생님(MCU)이 <b>\"0x27번!\"</b> 하고 부르면 그 학생(LCD)만 \"네!\"(ACK) 하고 대답해요.",
+    pts: [
+      "LCD의 번호는 <b>0x27</b>. 선 위에선 한 칸 밀린 0x4E로 보이지만, <b>함수엔 0x27</b>을 넣어요.",
+      "LCD는 글자 하나를 <b>반씩 두 번</b> 받아요('A' = 0x41 → 4 먼저, 1 나중). 그래서 글자 하나에 I2C 쓰기 4번.",
+      "I2C 스캔을 하고 나면 LCD가 헷갈리니 <code>Lcd1602_Init()</code>을 다시 불러요.",
+    ],
+    words: [
+      ["I2C", "SDA(데이터) · SCL(박자) 선 두 개로 여러 장치와 통신하는 방식."],
+      ["주소", "I2C에서 장치를 고르는 번호. LCD 백팩은 0x27."],
+      ["ACK / NACK", "\"네, 받았어요\" / 대답 없음."],
+      ["PCF8574", "LCD 뒤에 붙은 작은 칩(백팩). I2C로 받은 1바이트를 핀 8개로 내보내요."],
+      ["니블", "4비트 = 반 바이트. 'A'(0x41)의 윗 니블은 4, 아랫 니블은 1."],
+      ["E 핀", "LCD에게 \"지금 읽어!\"라고 알려 주는 핀. 1 → 0으로 떨어질 때 읽어요."],
+    ],
+    toy: "i2c",
+    traps: [
+      ["RTD API(Lpi2c_Ip_MasterSetSlaveAddr)에는 8비트 주소 0x4E를 넣는다.", false, "API에는 7비트 0x27을 넣어요. 0x4E를 넣으면 한 칸 밀려서 엉뚱한 주소로 가요."],
+      ["LCD는 E가 0 → 1로 올라갈 때 데이터를 잡는다.", false, "1 → 0 하강 에지에서 잡아요."],
+      ["I2C는 AUTOSAR 정식 표준 모듈이다.", false, "정식 표준이 아니라 NXP가 CDD(Complex Device Driver)로 제공해요."],
+      ["<code>Lpi2c_Ip_MasterInit()</code>과 <code>I2c_Init()</code>을 한 빌드에서 같이 불러도 된다.", false, "IPL과 MCAL은 대체 관계라 같이 부르면 충돌해요."],
+      ["I2C 스캔을 한 직후에는 <code>Lcd1602_Init()</code>을 다시 불러야 한다.", true, "스캐너가 LCD 주소에도 0x00을 보내서 핀 상태가 엉망이 되거든요."],
+    ],
+  },
+  {
+    id: "w5", wk: "5주차", title: "인터럽트",
+    card: "CPU가 계속 확인하는 대신, 버튼이 CPU를 부른다",
+    why: "버튼이 눌렸는지 CPU가 계속 확인하면 다른 일을 못 해요. 인터럽트를 쓰면 <b>버튼이 눌릴 때만 CPU를 불러요</b>.<br>결과물: 버튼을 누르면 횟수가 올라가고 LED가 바뀌어요.",
+    one: "CPU가 계속 확인하는 대신, 버튼이 눌리면 CPU를 불러요.",
+    ana: "택배 기다리기예요. 1분마다 문 열어 보기 = <b>폴링</b>, 초인종이 울리면 나가기 = <b>인터럽트</b>. 나가서는 <b>택배만 받고 바로 들어와요</b>.",
+    pts: [
+      "버튼(PTB26)은 <b>EIRQ 13번</b>. 13은 8~15 묶음이라 <b>SIUL_1_IRQn</b>을 골라요 (0번 아님).",
+      "ISR은 <b>짧게</b>: 숫자 세기, 깃발 세우기만. LCD · printf는 main에서. 같이 쓰는 변수는 <code>volatile</code>.",
+      "우선순위는 <b>숫자가 작을수록 먼저</b>. 버튼이 튀는 것(채터링)은 디바운싱으로 걸러요.",
+    ],
+    words: [
+      ["폴링", "CPU가 \"눌렸나?\"를 계속 반복해서 확인하는 방식."],
+      ["인터럽트", "하드웨어가 CPU를 불러서 하던 일을 잠깐 멈추게 하는 것."],
+      ["ISR / 콜백", "인터럽트가 오면 실행되는 함수. MCAL에선 '콜백'이라고 불러요."],
+      ["EIRQ", "SIUL2의 외부 인터럽트 입력 번호 (0~31)."],
+      ["NVIC", "인터럽트들을 줄 세워서 CPU에 전달하는 관리자."],
+      ["채터링 / 디바운싱", "버튼이 눌릴 때 몇 ms 동안 여러 번 튀는 현상 / 그걸 무시하는 처리."],
+    ],
+    toy: "irq",
+    traps: [
+      ["PTB26 버튼(EIRQ 13)은 SIUL_0_IRQn을 고르면 된다.", false, "13은 8~15 묶음이라 SIUL_1_IRQn(IRQ 54), SIUL2_EXT_IRQ_8_15_ISR이에요."],
+      ["ISR 안에서 LCD에 출력하거나 printf를 해도 된다.", false, "LCD는 수 ms 걸리는 블로킹 작업이에요. ISR은 카운트·플래그만, 출력은 main이."],
+      ["<code>Icu_Init()</code>만 부르면 인터럽트 콜백이 불린다.", false, "Icu_EnableEdgeDetection()과 Icu_EnableNotification()까지 불러야 해요."],
+      ["인터럽트 우선순위는 숫자가 클수록 급하다.", false, "작을수록 높아요. 0이 최고예요."],
+      ["HardFault에 멈췄다면 벡터 3번으로 들어간 것이다.", true, "잘못된 주소 접근 같은 치명적 오류가 벡터 3(HardFault)으로 가요."],
+    ],
+  },
+  {
+    id: "w6", wk: "6주차", title: "ADC와 이동 평균",
+    card: "돌린 만큼의 전압을 숫자로 바꿔 LCD에 찍기",
+    why: "세상의 값(빛, 온도, 노브 위치)은 0/1이 아니라 <b>연속적인 전압</b>이에요. CPU는 숫자만 알아서, 전압을 숫자로 바꿔 주는 장치(ADC)가 필요해요.<br>결과물: 노브를 돌리면 LCD의 전압 숫자가 바뀌어요.",
+    one: "노브를 돌린 만큼의 전압을 0~4095 숫자로 바꿔 LCD에 띄워요.",
+    ana: "물 높이를 <b>눈금 4096칸짜리 자</b>로 재는 거예요. 손이 떨려서 값이 흔들리니까 <b>여러 번 재서 평균</b>을 내요.",
+    pts: [
+      "숫자 → 전압: <code>전압 = 숫자 × 5000 / 4095</code> mV.",
+      "노브는 <b>ADC1</b>의 채널 S10 (핀 PTA11). ADC0이 아니에요.",
+      "Config Tools 기본값은 <b>14-bit</b>라서 그대로 두면 전압이 약 4배로 나와요. <b>12-bit로</b> 바꿔요.",
+    ],
+    words: [
+      ["ADC", "전압(아날로그)을 숫자(디지털)로 바꾸는 장치."],
+      ["분해능 (bit)", "몇 칸짜리 자인지. 12-bit = 4096칸(0~4095), 14-bit = 16384칸."],
+      ["Vref", "자의 맨 끝 눈금 전압. 교재 기준 5000 mV."],
+      ["가변저항", "돌리면 전압이 바뀌는 노브."],
+      ["이동 평균", "최근 N개 값의 평균. 흔들림이 줄지만 반응이 늦어져요."],
+      ["콜백", "변환이 끝나면 자동으로 불리는 함수. ISR처럼 짧게."],
+    ],
+    toy: "adc",
+    traps: [
+      ["온보드 가변저항은 ADC0으로 읽는다.", false, "ADC1의 채널 S10(PTA11)이에요."],
+      ["Config Tools의 Conversion resolution 기본값은 12-bit다.", false, "기본값은 14-bit예요. 그대로 두면 0~16383이 나와서 전압이 약 4배."],
+      ["이동 평균 N을 키우면 값은 더 안정되지만 노브를 돌렸을 때 더 늦게 따라간다.", true, "안정성과 응답 속도는 서로 바꿔치기예요."],
+      ["MCAL ADC 콜백 안에서 LCD에 결과를 출력해도 된다.", false, "콜백도 ISR 안에서 실행돼요. 플래그만 세우고 끝내요."],
+      ["콜백은 불리는데 main이 계속 기다리면 volatile 누락을 의심한다.", true, "AdcConvDone을 static volatile로 선언해야 main이 바뀐 값을 봐요."],
+    ],
+  },
+];
+
+// 챕터 → 자세히 보는 원래 페이지
+const DEEP = { hint: "hints.html", w1: "w1-uart.html", w2: "w2-gpio-bare.html", w3: "w3-ipl-mcal.html", w4: "w4-i2c-lcd.html", w5: "w5-interrupt.html", w6: "w6-adc.html" };
+const deepHref = (c) => "../weeks/" + DEEP[c.id];
+
+const NUMS = [
+  ["UART 설정", "115200 8N1", "1초에 115200비트, 데이터 8 · 패리티 없음 · Stop 1"],
+  ["VCOM UART / 핀", "LPUART6", "PTA16 = TX, PTA15 = RX (LPUART0 아님)"],
+  ["D13 빨간 LED 핀", "PTA29", "Active High: 1 = 켜짐"],
+  ["MSCR[29] 주소", "0x402902B4", "0x40290240 + 4 × 29"],
+  ["GPDO29 주소", "0x4029131E", "4개 묶음 거꾸로: 28 + (3 − 1) = 0x1E"],
+  ["IPL로 PTA29 쓰기", "PTA_H_HALF, 13U", "29 − 16 = 13"],
+  ["LCD 백팩 주소", "0x27 → 0x4E", "API엔 7비트 0x27, 버스엔 쓰기 바이트 0x4E"],
+  ["DDRAM 2행 시작", "0x40", "SetCursor 명령 = 0x80 | 주소"],
+  ["버튼 PTB26", "EIRQ 13 → IRQ 54", "SIUL_1_IRQn, SIUL2_EXT_IRQ_8_15_ISR"],
+  ["HardFault 벡터", "3번", "0 = 초기 SP, 1 = Reset, 2 = NMI, 3 = HardFault"],
+  ["가변저항 채널", "PTA11 = ADC1_S10", "MCAL: S10_ChanNum34"],
+  ["ADC 분해능 함정", "기본 14-bit", "RESOLUTION_12로 바꿔야 0~4095"],
+];
+
+/* ---------- 장난감 ---------- */
+const TOYS = {
+  bits(el) {
+    let reg = 0x4B, n = 3, msg = "칸을 하나 고르고 버튼을 눌러 보세요.";
+    let k = 3;
+    el.innerHTML = `
+      <p class="steps">① 0/1 칸 하나를 눌러 고르고 ② <b>SET</b>(켜기)이나 <b>CLEAR</b>(끄기)를 눌러요.<span class="look">👀 볼 것: <b>고른 칸만</b> 바뀌고 나머지 칸은 그대로예요.</span></p>
+      <div class="bits" id="bb"></div>
+      <div class="row" id="ops"></div>
+      <div class="out" id="bo"></div>
+      <details class="extra"><summary>덤: 구조체 멤버 주소 계산 (0x0C 함정)</summary>
+      <div class="row"><span class="mono">msrstart-&gt;v</span><b class="mono" id="kv"></b><input type="range" id="kr" min="0" max="6" value="3"></div>
+      <div class="out" id="ko"></div></details>`;
+    const ops = {
+      SET: ["|=", (r, m) => r | m, "n번 칸만 1로 켬"],
+      CLEAR: ["&= ~", (r, m) => r & ~m, "n번 칸만 0으로 끔"],
+      TOGGLE: ["^=", (r, m) => r ^ m, "n번 칸만 뒤집음"],
+      CHECK: ["&", (r) => r, ""],
+    };
+    for (const name in ops) {
+      const b = document.createElement("button");
+      b.className = "btn"; b.textContent = name;
+      b.onclick = () => {
+        const m = 1 << n, [sym, f, what] = ops[name];
+        if (name === "CHECK") {
+          const on = (reg & m) !== 0;
+          msg = `<code>(REG & (1U &lt;&lt; ${n})) != 0</code> → <span class="${on ? "ok" : "bad"}">${on ? "켜져 있어요 (참)" : "꺼져 있어요 (거짓)"}</span>`;
+        } else {
+          const before = reg; reg = f(reg, m) & 0xFF;
+          msg = `<code>REG ${sym} (1U &lt;&lt; ${n});</code> → ${what}<br><span class="mono">${bin(before)} → <b>${bin(reg)}</b></span>`;
+        }
+        draw();
+      };
+      $("#ops", el).append(b);
+    }
+    const draw = () => {
+      $("#bb", el).innerHTML = "";
+      for (let i = 7; i >= 0; i--) {
+        const d = document.createElement("div");
+        d.className = "bit click" + (reg >> i & 1 ? " on" : "") + (i === n ? " pick" : "");
+        d.innerHTML = `<small>비트 ${i}</small><b>${reg >> i & 1}</b>`;
+        d.onclick = () => { n = i; msg = `${i}번 칸 선택! 마스크 <code>1U &lt;&lt; ${i}</code> = <span class="mono">${bin(1 << i)}</span>`; draw(); };
+        $("#bb", el).append(d);
+      }
+      $("#bo", el).innerHTML = `<div>REG = <span class="big">${hex(reg)}</span> <span class="mono">(${bin(reg)})</span></div><div style="margin-top:6px">${msg}</div>`;
+      $("#kv", el).textContent = k;
+      const off = k * 4;
+      $("#ko", el).innerHTML = `${k}번째 칸 × 4바이트 = +${off}바이트 = <b class="mono">${hex(off)}</b><br>주소 = 0x10002000 + ${hex(off)} = <span class="big">${hex(0x10002000 + off, 8)}</span>` +
+        (off >= 10 ? `<br><span class="bad">0x100020${off}</span>라고 쓰면 틀려요! 10진수 ${off}를 그대로 붙인 거예요.` : "");
+    };
+    $("#kr", el).oninput = (e) => { k = +e.target.value; draw(); };
+    draw();
+  },
+
+  uart(el) {
+    el.innerHTML = `
+      <p class="steps">① 상자에 글자를 하나 넣어 봐요 (A, B, 1 …).<span class="look">👀 볼 것: 글자가 0/1 열 칸이 돼요. 맨 앞은 시작(0), 맨 끝은 끝(1), 가운데 8칸은 <b>작은 자리부터 거꾸로</b>.</span></p>
+      <div class="row">보낼 글자 <input type="text" id="uc" maxlength="1" value="A"></div>
+      <div class="wave" id="uw"></div>
+      <div class="out" id="uo"></div>`;
+    const draw = () => {
+      const c = ($("#uc", el).value || " ").charCodeAt(0) & 0xFF;
+      const cells = [["st lo", "Start", 0]];
+      for (let i = 0; i < 8; i++) { const v = c >> i & 1; cells.push([v ? "hi" : "lo", "b" + i, v]); }
+      cells.push(["sp hi", "Stop", 1]);
+      $("#uw", el).innerHTML = cells.map(([cl, l, v]) => `<div class="${cl}"><div class="ln"></div><div class="v">${v}</div><div>${l}</div></div>`).join("");
+      $("#uo", el).innerHTML = `'${String.fromCharCode(c)}' = <b class="mono">${hex(c)}</b> = <span class="mono">${bin(c)}</span><br>
+        선에는 <b>오른쪽 끝(LSB, b0)부터</b> 거꾸로 나가요: <span class="mono">${bin(c).split("").reverse().join("")}</span><br>
+        Start 1칸 + 데이터 8칸 + Stop 1칸 = <b>10칸</b> → 115200 bps면 한 글자에 약 <b>${(10 / 115200 * 1e6).toFixed(1)} µs</b> (9600 bps면 ${(10 / 9600 * 1e3).toFixed(2)} ms)`;
+    };
+    $("#uc", el).oninput = draw; draw();
+  },
+
+  gpdo(el) {
+    let n = 29;
+    el.innerHTML = `
+      <p class="steps">① 슬라이더로 핀 번호를 바꿔 보고 ② 다시 <b>29</b>로 맞춰요.<span class="look">👀 볼 것: <b>빨간 칸</b>(진짜 자리)과 <b>점선 칸</b>(그냥 더한 틀린 자리)이 달라요. 29에 맞추면 LED가 켜져요.</span></p>
+      <div class="row">GPIO[<b class="mono" id="gn"></b>] <input type="range" id="gr" min="0" max="31" value="29"></div>
+      <div class="cells" id="gc"></div>
+      <div class="out" id="go"></div>`;
+    const draw = () => {
+      const base = n - n % 4, real = 0x1300 + base + (3 - n % 4), wrong = 0x1300 + n;
+      $("#gn", el).textContent = n;
+      $("#gc", el).innerHTML = [0, 1, 2, 3].map((i) => {
+        const addr = 0x1300 + base + i, who = base + 3 - i;
+        return `<div class="cell ${addr === real ? "me" : addr === wrong ? "wrong" : ""}">+${hex(addr, 4)}<b>GPDO${who}</b></div>`;
+      }).join("");
+      $("#go", el).innerHTML = `
+        ① ${n}보다 작거나 같은 4의 배수 = <b>${base}</b> &nbsp; ② ${n} ÷ 4 나머지 = <b>${n % 4}</b> &nbsp; ③ ${base} + (3 − ${n % 4}) = <b>${base + 3 - n % 4}</b><br>
+        진짜 GPDO${n} = <span class="big">${hex(0x40290000 + real, 8)}</span><br>
+        <span class="bad">틀린 계산</span> 0x40291300 + ${n} = <span class="mono">${hex(0x40290000 + wrong, 8)}</span>${real === wrong ? " (이번엔 우연히 같아요)" : ""}<br>
+        MSCR[${n}] = 0x40290240 + 4 × ${n} = <b class="mono">${hex(0x40290240 + 4 * n, 8)}</b><br>
+        <span class="led ${n === 29 ? "on" : ""}"></span>${n === 29 ? "<span class=ok>PTA29 = D13 빨간 LED가 켜져요!</span>" : "이 핀에는 D13 LED가 없어요. 29로 맞춰 보세요."}`;
+    };
+    $("#gr", el).oninput = (e) => { n = +e.target.value; draw(); };
+    draw();
+  },
+
+  half(el) {
+    let n = 29;
+    el.innerHTML = `
+      <p class="steps">① 슬라이더로 핀 번호를 바꿔 봐요. ② 아래 Port / Dio 문제도 눌러 봐요.<span class="look">👀 볼 것: 16 이상이면 <b>위쪽 반(H_HALF)</b>, 번호는 <b>16을 뺀 값</b>이 돼요.</span></p>
+      <div class="row">PTA<b class="mono" id="hn"></b> <input type="range" id="hr" min="0" max="31" value="29"></div>
+      <div class="bits" id="hb"></div>
+      <div class="out" id="ho"></div>
+      <h2 style="margin-top:22px;font-size:18px">누구 담당? Port vs Dio</h2>
+      <div class="sort" id="hs"></div>`;
+    const draw = () => {
+      const hi = n >= 16, rel = n % 16;
+      $("#hn", el).textContent = n;
+      $("#hb", el).innerHTML = Array.from({ length: 32 }, (_, i) => 31 - i).map((i) =>
+        `<div class="bit ${i === n ? "on" : ""}" style="width:24px;padding:2px 0;${i === 15 ? "margin-right:10px" : ""}"><small>${i}</small></div>`).join("");
+      $("#ho", el).innerHTML = `PTA${n}은 <b>${hi ? "High Half (PTA[31:16])" : "Low Half (PTA[15:0])"}</b> 안에서 <b>${rel}번째</b> 핀이에요.<br>
+        IPL: <code>Siul2_Dio_Ip_WritePin(${hi ? "PTA_H_HALF" : "PTA_L_HALF"}, ${rel}U, 1U);</code><br>
+        MCAL Dio 설정: Port Id = <b>${hi ? 1 : 0}</b>, Channel Id = <b>${rel}</b> → 코드에선 이름만: <code>Dio_WriteChannel(DioConf_DioChannel_LED_RED, STD_HIGH);</code>`;
+    };
+    const jobs = [
+      ["PTA29를 GPIO 출력으로 정하기 (방향 · Mux)", "Port"],
+      ["실행 중에 LED를 HIGH로 쓰기", "Dio"],
+      ["시작할 때 한 번만 부르기 (Port_Init)", "Port"],
+      ["LED 값을 반대로 뒤집기 (FlipChannel)", "Dio"],
+    ];
+    for (const [t, a] of jobs) {
+      const d = document.createElement("div");
+      d.className = "item";
+      d.innerHTML = `<span>${t}</span><span><button class="btn">Port</button> <button class="btn">Dio</button></span><span class="res"></span>`;
+      d.querySelectorAll("button").forEach((b) => b.onclick = () => {
+        const ok = b.textContent === a;
+        d.querySelector(".res").innerHTML = ok ? `<span class="ok">정답!</span> ${a === "Port" ? "Port는 시작할 때 핀이 뭔지 정해요." : "Dio는 실행 중에 값만 읽고 써요."}` : `<span class="bad">아쉬워요.</span> 정답은 ${a}예요.`;
+      });
+      $("#hs", el).append(d);
+    }
+    $("#hr", el).oninput = (e) => { n = +e.target.value; draw(); };
+    draw();
+  },
+
+  i2c(el) {
+    el.innerHTML = `
+      <p class="steps">① 일단 그대로 아래 결과만 읽어 봐요.<span class="look">👀 볼 것: LCD 번호 <b>0x27</b>이 선 위에서는 <b>0x4E</b>가 돼요. 그래도 함수엔 0x27을 넣어요.</span></p>
+      <div class="row">7비트 주소 0x<input type="text" id="ia" maxlength="2" value="27"></div>
+      <div class="out" id="iao"></div>
+      <details class="extra"><summary>덤: 글자 하나가 LCD에 4번 나눠 가는 모습</summary>
+      <div class="row">보낼 글자 <input type="text" id="ic" maxlength="1" value="A"></div>
+      <div class="out" id="ico"></div></details>
+      <details class="extra"><summary>덤: 커서 위치 명령 (2행 = 0x40)</summary>
+      <div class="row">행 <button class="btn sel" data-r="0">1행</button><button class="btn" data-r="1">2행</button> &nbsp; 열 <b class="mono" id="ccv"></b><input type="range" id="cc" min="0" max="15" value="0"></div>
+      <div class="out" id="cco"></div></details>`;
+    let row = 0;
+    const draw = () => {
+      const a = parseInt($("#ia", el).value, 16) & 0x7F || 0;
+      const b = a << 1;
+      $("#iao", el).innerHTML = `주소 <span class="mono">${bin(a, 7)}</span> 뒤에 W(쓰기) 비트 <b>0</b>을 붙이면 → <span class="mono">${bin(b)}</span> = <span class="big">${hex(b)}</span><br>
+        버스엔 ${hex(b)}가 나가지만, <b>RTD API에는 ${hex(a)}</b>를 넣어요. 장치가 있으면 9번째 클럭에 SDA를 LOW로 당겨 <b>ACK</b>.`;
+      const c = ($("#ic", el).value || " ").charCodeAt(0) & 0xFF, hiN = c >> 4, loN = c & 0xF;
+      const BL = 0x08, RS = 0x01, E = 0x04;
+      const H = (c & 0xF0) | BL | RS, L = ((c << 4) & 0xF0) | BL | RS;
+      const seq = [[H | E, "윗 니블 + E=1"], [H, "윗 니블 + E=0 ← 여기서 래치!"], [L | E, "아랫 니블 + E=1"], [L, "아랫 니블 + E=0 ← 여기서 래치!"]];
+      $("#ico", el).innerHTML = `'${String.fromCharCode(c)}' = <b class="mono">${hex(c)}</b> → 윗 니블 <b class="mono">${hiN.toString(16).toUpperCase()}</b> 먼저, 아랫 니블 <b class="mono">${loN.toString(16).toUpperCase()}</b> 나중.<br>
+        PCF8574로 가는 I2C 쓰기 <b>4번</b> (백라이트 0x08 + RS=1 데이터):<br>` +
+        seq.map(([v, t], i) => `<span class="tag">${i + 1}</span><span class="mono">${hex(v)}</span> ${t}`).join("<br>");
+      const col = +$("#cc", el).value, addr = (row ? 0x40 : 0) | col;
+      $("#ccv", el).textContent = col;
+      const line = (r) => Array.from({ length: 16 }, (_, i) => (r === row && i === col ? "█" : "·")).join("");
+      $("#cco", el).innerHTML = `<div class="lcd">${line(0)}\n${line(1)}</div><br>
+        DDRAM 주소 = ${row ? "0x40" : "0x00"} + ${col} = <b class="mono">${hex(addr)}</b> → 명령 <code>0x80 | ${hex(addr)}</code> = <span class="big">${hex(0x80 | addr)}</span>`;
+    };
+    el.querySelectorAll("[data-r]").forEach((b) => b.onclick = () => {
+      row = +b.dataset.r; el.querySelectorAll("[data-r]").forEach((x) => x.classList.toggle("sel", x === b)); draw();
+    });
+    ["#ia", "#ic", "#cc"].forEach((s) => $(s, el).oninput = draw);
+    draw();
+  },
+
+  irq(el) {
+    let n = 13, timer = null;
+    el.innerHTML = `
+      <p class="steps">① <b>버튼 누르기</b>를 눌러요.<span class="look">👀 볼 것: 불이 main → 버튼 → … → 다시 main으로 <b>한 바퀴</b> 돌아요. main은 하던 일을 잠깐 멈췄다가 그대로 이어 가요.</span></p>
+      <div class="row"><button class="btn main" id="ep">버튼 누르기</button> <span id="cnt" class="mono">g_press_count = 0</span></div>
+      <div class="flow" id="ef"></div>
+      <div class="out" id="es">버튼을 누르면 한 단계씩 불이 들어와요.</div>
+      <details class="extra"><summary>덤: EIRQ 13이 왜 SIUL_1_IRQn인지</summary>
+      <div class="row">EIRQ[<b class="mono" id="en"></b>] <input type="range" id="er" min="0" max="31" value="13"></div>
+      <div class="bits" id="eg"></div>
+      <div class="out" id="eo"></div></details>`;
+    let count = 0;
+    const steps = () => [
+      ["main 루프", "main은 평소처럼 자기 일을 하고 있어요. 버튼을 확인하지 않아요."],
+      ["버튼 PTB26", "버튼이 눌려서 핀 전압이 바뀌어요(에지)."],
+      [`EIRQ[${n}]`, `SIUL2가 에지를 감지해서 EIRQ[${n}] 플래그를 세워요.`],
+      [`NVIC IRQ ${53 + (n >> 3)}`, `${(n >> 3) * 8}~${(n >> 3) * 8 + 7} 묶음이라 SIUL_${n >> 3}_IRQn(IRQ ${53 + (n >> 3)})이 NVIC에 들어가요.`],
+      ["스택 PUSH", "하드웨어가 자동으로 레지스터(R0~R3, R12, LR, PC, xPSR)를 스택에 쌓아요."],
+      ["ISR · 콜백", "콜백은 짧게! g_press_count++ 하고 LED 요청 플래그만 뒤집어요."],
+      ["POP · 복귀", "스택에서 꺼내서 main이 멈췄던 바로 그 자리로 돌아가요."],
+    ];
+    const drawFlow = (lit) => {
+      $("#ef", el).innerHTML = steps().map(([t], i) => `${i ? "<i>→</i>" : ""}<span class="${i === lit ? "lit" : ""}">${t}</span>`).join("");
+    };
+    const draw = () => {
+      const g = n >> 3;
+      $("#en", el).textContent = n;
+      $("#eg", el).innerHTML = [0, 1, 2, 3].map((i) => `<div class="cell ${i === g ? "me" : ""}" style="flex:1;min-width:110px">EIRQ ${i * 8}~${i * 8 + 7}<b>IRQ ${53 + i}</b></div>`).join("");
+      $("#eg", el).style.display = "flex";
+      $("#eo", el).innerHTML = `EIRQ ${n} ÷ 8 = <b>${g}</b>번 묶음 →
+        <code>SIUL_${g}_IRQn</code> (IRQ ${53 + g}) → 핸들러 <code>SIUL2_EXT_IRQ_${g * 8}_${g * 8 + 7}_ISR</code><br>
+        ${n === 13 ? '<span class="ok">실습 버튼 PTB26이 바로 이거예요!</span>' : n < 8 ? '<span class="bad">13번을 SIUL_0_IRQn으로 고르는 게 단골 실수예요.</span>' : ""}`;
+      drawFlow(-1);
+    };
+    $("#ep", el).onclick = () => {
+      clearInterval(timer);
+      let i = 0;
+      const tick = () => {
+        const s = steps();
+        drawFlow(i); $("#es", el).innerHTML = `<b>${i + 1}. ${s[i][0]}</b> — ${s[i][1]}`;
+        if (i === 5) { count++; $("#cnt", el).textContent = `g_press_count = ${count}`; }
+        if (++i >= s.length) clearInterval(timer);
+      };
+      tick(); timer = setInterval(tick, 1100);
+    };
+    $("#er", el).oninput = (e) => { n = +e.target.value; draw(); };
+    draw();
+  },
+
+  adc(el) {
+    let res = 12;
+    el.innerHTML = `
+      <p class="steps">① 노브 슬라이더를 돌려 봐요. ② <b>RESOLUTION_14</b>를 눌러 봐요.<span class="look">👀 볼 것: 12-bit일 땐 LCD 전압이 맞지만, 14-bit(기본값)로 두면 <b>약 4배로 틀려요</b>.</span></p>
+      <div class="row">노브 <b class="mono" id="kp"></b> <input type="range" id="kn" min="0" max="100" value="50"></div>
+      <div class="row">분해능 <button class="btn sel" data-b="12">RESOLUTION_12</button><button class="btn" data-b="14">RESOLUTION_14 (기본값)</button></div>
+      <div class="out" id="ao"></div>
+      <details class="extra"><summary>덤: 이동 평균이 흔들림을 줄이는 모습</summary>
+      <div class="row">N = <b class="mono" id="mnv">8</b><input type="range" id="mn" min="1" max="16" value="8"><button class="btn" id="mr">새로 읽기</button></div>
+      <div class="out" id="mo"></div></details>`;
+    const draw = () => {
+      const p = +$("#kn", el).value, mv = p * 50, max = (1 << res) - 1;
+      const code = Math.round(mv / 5000 * max), shown = Math.round(code * 5000 / 4095);
+      $("#kp", el).textContent = p + "%";
+      $("#ao", el).innerHTML = `입력 전압 <b>${mv} mV</b> → ${res}-bit 코드 (0~${max}) = <span class="big">${code}</span><br>
+        LCD 표시 = ${code} × 5000 / 4095 = <b>${shown} mV</b> ${res === 12 ? '<span class="ok">✓ 맞아요</span>' : `<span class="bad">✗ 실제의 약 ${(shown / Math.max(mv, 1)).toFixed(1)}배!</span>`}<br>
+        <div class="lcd" style="margin-top:8px">${("HW:" + code).padEnd(16)}\n${(shown + "mV").padEnd(16)}</div>`;
+    };
+    let samples = [];
+    const noisy = () => { samples = Array.from({ length: 40 }, (_, i) => (i < 15 ? 1000 : 3000) + Math.round((Math.random() - .5) * 120)); };
+    const drawMA = () => {
+      const N = +$("#mn", el).value;
+      $("#mnv", el).textContent = N;
+      const W = 600, Hh = 140, x = (i) => 10 + i * (W - 20) / (samples.length - 1), y = (v) => Hh - 10 - (v / 4095) * (Hh - 20);
+      const ma = samples.map((_, i) => { const a = samples.slice(Math.max(0, i - N + 1), i + 1); return a.reduce((s, v) => s + v, 0) / a.length; });
+      const path = (arr) => arr.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(" ");
+      $("#mo", el).innerHTML = `<svg viewBox="0 0 ${W} ${Hh}" style="width:100%;height:auto">
+        <path d="${path(samples)}" fill="none" stroke="var(--dim)" stroke-width="1.5" opacity=".6"/>
+        <path d="${path(ma)}" fill="none" stroke="var(--red)" stroke-width="3"/>
+        <line x1="${x(15)}" x2="${x(15)}" y1="0" y2="${Hh}" stroke="var(--teal)" stroke-dasharray="4 4"/>
+        <text x="${x(15) + 4}" y="14" font-size="12" fill="var(--teal)">노브 돌림</text></svg>
+        <span style="color:var(--dim)">회색 = 하드웨어 평균값(HW)</span>, <span class="bad">빨강 = 이동 평균(MA)</span>.
+        N이 크면 <b>덜 흔들리지만 늦게</b> 따라가요. N이 작으면 빨리 따라가지만 흔들려요.`;
+    };
+    el.querySelectorAll("[data-b]").forEach((b) => b.onclick = () => {
+      res = +b.dataset.b; el.querySelectorAll("[data-b]").forEach((x) => x.classList.toggle("sel", x === b)); draw();
+    });
+    $("#kn", el).oninput = draw;
+    $("#mn", el).oninput = drawMA;
+    $("#mr", el).onclick = () => { noisy(); drawMA(); };
+    noisy(); draw(); drawMA();
+  },
+};
+
+/* ---------- 화면 ---------- */
+const app = $("#app");
+
+function progress() {
+  $("#progBar").style.width = (done.size / CH.length * 100) + "%";
+  $("#progTxt").textContent = `${done.size} / ${CH.length}`;
+}
+
+function home() {
+  app.innerHTML = `
+    <h1>임베디드 중간고사,<br>진짜 쉽게</h1>
+    <p class="lede">S32K312 수업 1~6주차와 교수님 힌트를 <b>비유 하나 + 핵심 몇 줄 + 직접 만져 보기 + 함정 OX</b>로 정리했어요. 한 챕터 5분이면 충분해요.</p>
+    <div class="loop"><span class="me">① 5분 요약</span><i>→</i><span>② 원래 페이지에서 자세히</span><i>→</i><span>③ 다음 주차 요약</span><i>→ … →</i><span>④ 숫자 · OX로 마무리</span></div>
+    ${contCard()}
+    <div class="grid">
+      ${CH.map((c) => `<a class="ch ${done.has(c.id) ? "done" : ""}" href="#/${c.id}">
+        <div class="wk">${c.wk}</div><b>${c.title}</b><p>${c.card}</p></a>`).join("")}
+      <a class="ch special" href="#/nums"><div class="wk">시험 직전</div><b>꼭 외울 숫자 12개</b><p>카드를 눌러서 맞혀 보기</p></a>
+      <a class="ch special" href="#/quiz"><div class="wk">총정리</div><b>함정 OX 랜덤 퀴즈</b><p>모든 주차의 낚시 문제를 섞어서</p></a>
+    </div>
+    <div class="howto"><b>이렇게 보면 좋아요</b>
+      <ol><li>여기서 왜 하는지, 비유, 장난감, 함정 OX로 \"아 그거구나\" 감을 잡고</li><li>챕터 끝 버튼으로 <b>원래 페이지</b>에 넘어가 코드 한 줄씩, 레지스터 비트, 체크 퀴즈까지 보고</li><li>원래 페이지 맨 아래 버튼으로 <b>다음 주차 요약</b>에 돌아와요.</li><li>다 돌면 숫자 12개와 OX 랜덤 퀴즈로 마무리해요.</li></ol>
+    </div>`;
+}
+
+// 아직 안 본 첫 챕터로 이어서 (처음이면 "시작하기")
+function contCard() {
+  const c = CH.find((x) => !done.has(x.id));
+  if (!c) return `<a class="cont" href="#/quiz"><span><small>요약 7개를 다 봤어요</small><b>함정 OX 랜덤 퀴즈로 마무리</b></span><span class="go">풀기 →</span></a>`;
+  return `<a class="cont" href="#/${c.id}"><span><small>${done.size ? "여기부터 이어서" : "처음이면 여기부터"}</small><b>${c.wk} · ${c.title}</b></span><span class="go">${done.size ? "이어서 보기" : "시작하기"} →</span></a>`;
+}
+
+function chapter(c) {
+  const i = CH.indexOf(c), prev = CH[i - 1], next = CH[i + 1];
+  app.innerHTML = `
+    <div class="kicker">${c.wk}</div>
+    <h1>${c.title}</h1>
+    <div class="box"><h2><span class="n">1</span>이번 주에 뭐 해?</h2><p class="oneline">${c.one}</p><p class="why">${c.why}</p></div>
+    <div class="box analogy"><h2><span class="n">2</span>비유로</h2><p>${c.ana}</p></div>
+    <div class="box"><h2><span class="n">3</span>꼭 기억할 것 3개</h2><ol class="points">${c.pts.map((p) => `<li>${p}</li>`).join("")}</ol></div>
+    <details class="box words"><summary><h2><span class="n">4</span>모르는 말 사전</h2><span class="more">위에서 모르는 말이 있으면 열어 보세요</span></summary>
+      <dl>${c.words.map(([w, d]) => `<dt>${w}</dt><dd>${d}</dd>`).join("")}</dl></details>
+    <div class="box toy"><h2><span class="n">5</span>직접 만져 보기</h2><div id="toy"></div></div>
+    <div class="box"><h2><span class="n">6</span>시험 함정 OX</h2><p class="hint" style="color:var(--dim);margin-top:-6px">O인지 X인지 먼저 골라 보세요.</p><div class="traps" id="traps"></div></div>
+    <div class="box nextstep"><h2><span class="n">7</span>감 잡았으면, 이제 제대로</h2>
+      <p>원래 ${c.wk} 페이지에서 코드를 한 줄씩 따라가고, 레지스터 비트를 눌러 보고, 체크 퀴즈까지 풀어요. 다 보면 그 페이지 맨 아래에서 ${next ? `<b>${next.wk} 요약</b>으로` : "<b>마무리 퀴즈</b>로"} 바로 돌아올 수 있어요.</p>
+      <div class="row">
+        <a class="btn main mark" href="${deepHref(c)}">원래 ${c.wk} 페이지에서 자세히 →</a>
+        <a class="btn mark" href="${next ? `#/${next.id}` : "#/quiz"}">${next ? `요약만 이어서: ${next.wk}` : "OX 퀴즈로"} →</a>
+      </div>
+    </div>
+    ${prev ? `<a class="back" href="#/${prev.id}">← ${prev.wk} 요약</a>` : `<a class="back" href="#/">← 처음으로</a>`}`;
+  TOYS[c.toy]($("#toy"));
+  for (const [q, a, why] of c.traps) {
+    const d = document.createElement("div");
+    d.className = "trap";
+    d.innerHTML = `<div class="q">${q}</div><div class="ox"><button>O</button><button>X</button></div><div class="ans"></div>`;
+    d.querySelectorAll(".ox button").forEach((b) => b.onclick = () => {
+      const ok = (b.textContent === "O") === a;
+      d.className = "trap open " + (ok ? "right" : "wrong");
+      d.querySelector(".ans").innerHTML = `${ok ? '<span class="ok">맞았어요!</span>' : '<span class="bad">낚였어요!</span>'} 정답은 <b>${a ? "O" : "X"}</b>. ${why}`;
+    });
+    $("#traps").append(d);
+  }
+  // 어느 쪽으로 넘어가든 이 요약은 본 것으로
+  app.querySelectorAll(".mark").forEach((a) => a.addEventListener("click", () => { done.add(c.id); saveDone(); progress(); }));
+}
+
+function nums() {
+  app.innerHTML = `
+    <div class="kicker">시험 직전</div><h1>꼭 외울 숫자 12개</h1>
+    <p class="lede">질문만 보고 답을 떠올린 다음 카드를 눌러 확인해요.</p>
+    <div class="row"><button class="btn" id="all">전부 열기</button><button class="btn" id="none">전부 닫기</button></div>
+    <div class="nums">${NUMS.map(([k, v, w]) => `<div class="num"><div class="k">${k}</div><div class="v">${v}</div><div class="w">${w}</div></div>`).join("")}</div>
+    <div class="nav"><a class="btn" href="#/">← 처음으로</a><a class="btn main" href="#/quiz">함정 OX 퀴즈로 →</a></div>`;
+  app.querySelectorAll(".num").forEach((n) => n.onclick = () => n.classList.toggle("open"));
+  $("#all").onclick = () => app.querySelectorAll(".num").forEach((n) => n.classList.add("open"));
+  $("#none").onclick = () => app.querySelectorAll(".num").forEach((n) => n.classList.remove("open"));
+}
+
+function quiz() {
+  const all = CH.flatMap((c) => c.traps.map(([q, a, why]) => ({ q, a, why, wk: c.wk, id: c.id })));
+  for (let i = all.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [all[i], all[j]] = [all[j], all[i]]; }
+  let i = 0, score = 0, answered = false;
+  const wrong = [];
+  const show = () => {
+    if (i >= all.length) {
+      app.innerHTML = `<div class="quiz"><h1>끝! ${score} / ${all.length}</h1>
+        <p class="lede">${score === all.length ? "완벽해요. 시험장에서도 안 낚일 거예요." : "틀린 문제의 챕터를 다시 한번 보고 와요."}</p>
+        ${wrong.length ? `<div class="box" style="text-align:left"><h2>다시 볼 곳</h2>${wrong.map((w) => `<p><b>${w.wk}</b> <a href="#/${w.id}">요약</a> · <a href="../weeks/${DEEP[w.id]}">자세히</a> — ${w.q}<br><small style="color:var(--dim)">정답 ${w.a ? "O" : "X"} — ${w.why}</small></p>`).join("")}</div>` : ""}
+        <div class="row" style="justify-content:center"><button class="btn main" id="again">다시 풀기</button>${score < all.length ? "" : `<a class="btn" href="#/nums">숫자 12개 복습</a>`}<a class="btn" href="#/">처음으로</a></div></div>`;
+      $("#again").onclick = quiz;
+      return;
+    }
+    const it = all[i]; answered = false;
+    app.innerHTML = `<div class="quiz">
+      <div class="score">${i + 1} / ${all.length} · 맞힌 개수 ${score} · <span class="tag">${it.wk}</span></div>
+      <div class="q">${it.q}</div>
+      <div class="ox"><button data-a="1">O</button><button data-a="0">X</button></div>
+      <div class="why" id="why"></div></div>`;
+    app.querySelectorAll("[data-a]").forEach((b) => b.onclick = () => {
+      if (answered) return; answered = true;
+      const ok = (b.dataset.a === "1") === it.a;
+      if (ok) score++; else wrong.push(it);
+      $("#why").innerHTML = `<p>${ok ? '<span class="ok" style="font-size:22px">맞았어요!</span>' : '<span class="bad" style="font-size:22px">낚였어요!</span>'}<br>정답은 <b>${it.a ? "O" : "X"}</b>. ${it.why}</p><button class="btn main" id="nx">다음 →</button>`;
+      $("#nx").onclick = () => { i++; show(); };
+    });
+  };
+  show();
+}
+
+function route() {
+  const id = location.hash.replace(/^#\/?/, "");
+  const c = CH.find((x) => x.id === id);
+  if (c) chapter(c);
+  else if (id === "nums") nums();
+  else if (id === "quiz") quiz();
+  else home();
+  progress();
+  window.scrollTo(0, 0);
+}
+addEventListener("hashchange", route);
+route();
+</script>
+</body>
+</html>
