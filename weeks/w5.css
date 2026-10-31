@@ -18,7 +18,7 @@ svg.timeline .win { fill: var(--clk); opacity: .22; }
 .vtable tr.mark td { background: var(--on-soft); }
 
 .groups { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 16px 0; }
-.group { border: 1px solid var(--line); border-radius: 5px; padding: 8px 10px; font: 12px/1.5 var(--mono); background: var(--bg); transition: background .25s, border-color .25s; }
+.group { overflow-wrap: anywhere; border: 1px solid var(--line); border-radius: 5px; padding: 8px 10px; font: 12px/1.5 var(--mono); background: var(--bg); transition: background .25s, border-color .25s; }
 .group b { display: block; font-size: 13px; }
 .group.on { border-color: var(--on); background: var(--on-soft); }
 .chain { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 14px; }
@@ -48,10 +48,10 @@ svg.timeline .win { fill: var(--clk); opacity: .22; }
 .tl .gone { flex-basis: 0; opacity: 0; padding-left: 0; padding-right: 0; border-width: 0; }
 
 .rules li { margin-bottom: 6px; }
-.isr-cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0; }
+.isr-cmp { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 20px 0; }
 .isr-cmp .good { color: var(--ok); }
 .isr-cmp .bad { color: var(--on); }
-@media (max-width: 760px) { .isr-cmp { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .isr-cmp { grid-template-columns: minmax(0, 1fr); } }
 
 .order-label { font: 13px var(--mono); color: var(--ink-2); margin: 16px 0 6px; }
 .order { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; counter-reset: o; }

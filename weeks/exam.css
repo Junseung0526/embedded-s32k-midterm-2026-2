@@ -3,10 +3,12 @@
 
 .ex-card { display: grid; gap: 16px; }
 .ex-prog { display: flex; gap: 4px; }
-.ex-seg { flex: 1; height: 8px; min-width: 0; padding: 0; border: 0; border-radius: 4px; background: var(--panel-2); cursor: pointer; }
-.ex-seg.ok { background: var(--ok); }
-.ex-seg.ng { background: var(--on); }
-.ex-seg.cur { outline: 2px solid var(--ink); outline-offset: 2px; }
+/* 막대는 8px이지만 손가락으로 누를 수 있게 버튼 높이는 24px */
+.ex-seg { flex: 1; position: relative; height: 24px; min-width: 0; padding: 0; border: 0; background: none; cursor: pointer; }
+.ex-seg::before { content: ""; position: absolute; left: 0; right: 0; top: 8px; height: 8px; border-radius: 4px; background: var(--panel-2); }
+.ex-seg.ok::before { background: var(--ok); }
+.ex-seg.ng::before { background: var(--on); }
+.ex-seg.cur::before { outline: 2px solid var(--ink); outline-offset: 2px; }
 .ex-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font: 14px var(--mono); color: var(--ink-2); }
 .ex-score { margin-left: auto; }
 .ex-score b { color: var(--ink); }

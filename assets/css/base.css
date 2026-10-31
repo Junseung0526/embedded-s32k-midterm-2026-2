@@ -44,6 +44,8 @@ body {
 a { color: inherit; text-underline-offset: 3px; }
 code, kbd { font-family: var(--mono); font-size: .92em; }
 p code, li code, td code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; }
+/* 긴 함수 이름이 좁은 화면에서 가로로 삐져나가지 않게 (pre 코드 블록은 가로 스크롤 유지) */
+:not(pre) > code { overflow-wrap: anywhere; }
 
 /* ---------- 페이지 뼈대 ---------- */
 .topbar {
@@ -147,7 +149,7 @@ svg rect.slot.hl { fill: var(--on-soft); }
 .tangle { font-family: var(--mono); font-weight: 700; color: var(--on); border-bottom: 2px dashed var(--on); cursor: ew-resize; padding: 0 2px; user-select: none; touch-action: none; border-radius: 2px; }
 .tangle:hover, .tangle:focus-visible, .tangle.drag { background: var(--on-soft); outline: none; }
 .tangle::after { content: " ⇆"; font-size: .75em; opacity: .6; }
-.st-ctrl input[type="range"] { flex: 1; min-width: 80px; }
+.st-ctrl input[type="range"] { flex: 1; min-width: 60px; }
 .st-ctrl .hint { margin-left: 4px; }
 @media (max-width: 760px) {
   .st-body { grid-template-columns: minmax(0, 1fr); }
@@ -208,7 +210,7 @@ svg rect.slot.hl { fill: var(--on-soft); }
 @media (max-width: 480px) { .mv-row { grid-template-columns: 11ch 4ch 1fr; } .mv-off, .mv-op { display: none; } }
 
 /* ---------- 말풍선 (낚시 포인트) ---------- */
-.bubble { display: grid; grid-template-columns: 52px 1fr; gap: 14px; align-items: start; margin: 24px 0; }
+.bubble { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 14px; align-items: start; margin: 24px 0; }
 .bubble .who svg { width: 52px; height: 52px; display: block; }
 .bubble .say { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; position: relative; }
 .bubble .say::before { content: ""; position: absolute; left: -7px; top: 18px; width: 12px; height: 12px; background: var(--panel); border-left: 1px solid var(--line); border-bottom: 1px solid var(--line); transform: rotate(45deg); }
@@ -221,7 +223,7 @@ svg rect.slot.hl { fill: var(--on-soft); }
 .quiz .q { font-weight: 600; margin: 0 0 10px; }
 .quiz .q::before { counter-increment: q; content: "Q" counter(q) "  "; font-family: var(--mono); color: var(--ink-2); font-weight: 400; }
 .quiz .choices { display: grid; gap: 6px; }
-.quiz .choice { text-align: left; font: 15px var(--mono); padding: 8px 12px; border-radius: 5px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+.quiz .choice { overflow-wrap: anywhere; text-align: left; font: 15px var(--mono); padding: 8px 12px; border-radius: 5px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
 .quiz .choice:hover { border-color: var(--ink); }
 .quiz .choice.right { border-color: var(--ok); background: var(--ok); color: #fff; }
 .quiz .choice.wrong { border-color: var(--on); color: var(--on); text-decoration: line-through; }

@@ -2,7 +2,7 @@
 :root { --pcb: #C9C7C1; --pcb-edge: #B3B1AA; --silk: #6E6C66; --metal: #A9AAA6; --chipc: #2B2C29; }
 @media (prefers-color-scheme: dark) { :root { --pcb: #363732; --pcb-edge: #4A4B45; --silk: #9A988F; --metal: #6F706B; --chipc: #141513; } }
 
-.hub-main { display: grid; gap: 24px; min-width: 0; }
+.hub-main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; min-width: 0; }
 .hub { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 24px; align-items: start; }
 @media (max-width: 900px) { .hub { grid-template-columns: minmax(0, 1fr); } }
 .board-wrap { margin: 0; }

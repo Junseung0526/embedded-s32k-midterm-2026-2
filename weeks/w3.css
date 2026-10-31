@@ -44,7 +44,7 @@
 .move-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
 .move-cols pre { font-size: 12px; min-height: 9em; }
 .mv-count { font: 600 14px var(--mono); margin: 6px 0 0; }
-@media (max-width: 900px) { .move-cols { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .move-cols { grid-template-columns: minmax(0, 1fr); } }
 
 .bars { display: grid; gap: 10px; margin: 14px 0; }
 .bar-row { display: grid; grid-template-columns: 6ch 1fr; align-items: center; gap: 10px; font: 14px var(--mono); }
