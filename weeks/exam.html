@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>중간고사 예상문제 · 임베디드</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect x=%277%27 y=%277%27 width=%2718%27 height=%2718%27 rx=%273%27 fill=%27%232B2C29%27/%3E%3Cpath d=%27M3 12h4M3 20h4M25 12h4M25 20h4M12 3v4M20 3v4M12 25v4M20 25v4%27 stroke=%27%238E8C85%27 stroke-width=%272%27/%3E%3Ccircle cx=%2721%27 cy=%2711%27 r=%273%27 fill=%27%23E8412C%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/css/base.css">
+<style>
+  /* 문제 풀이 페이지라 설명 글도 본문 폭을 꽉 채운다 */
+  .page .prose, .page .lede { max-width: none; }
+  .exam-bar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a href="../index.html">embedded-visual / 2026-2</a>
+  <span>exam · 중간고사 예상문제</span>
+</header>
+
+<main class="page">
+  <section class="hero">
+    <div class="kicker">중간고사 대비 · 예상문제 (실제 기출 아님)</div>
+    <h1>주차별 예상문제</h1>
+    <p class="lede">교수님 힌트와 1~6주차 내용으로 만든 연습 문제예요. 계산 문제는 숫자를 매번 새로 만들고, 개념·서술형은 300여 개 문제은행에서 뽑아요. 보기 순서도 매번 섞여요. 객관식은 처음 고른 답이 틀리면 오답 노트에 쌓이고(이 브라우저에만 저장), 다시 풀어서 처음에 맞히면 빠져요. 단답·서술형은 "틀렸어요" 버튼으로 넣어요.</p>
+  </section>
+
+  <section>
+    <div class="exam-bar">
+      <div class="row" id="rndTopics" role="group" aria-label="주제 선택"></div>
+      <div class="row">
+        <button class="key" type="button" id="rndNew">새 문제 10개</button>
+        <button class="key" type="button" id="noteReview">오답 다시 풀기 (0)</button>
+        <button class="key" type="button" id="noteClear">오답 비우기</button>
+      </div>
+    </div>
+    <h2 id="boxTitle">랜덤 문제</h2>
+    <div class="widget" id="qBox"></div>
+  </section>
+</main>
+
+<script type="module" src="../assets/js/core.js"></script>
+<script type="module" src="../assets/js/quiz.js"></script>
+<script type="module" src="exam.js"></script>
+</body>
+</html>
