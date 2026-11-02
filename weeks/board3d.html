@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3D 보드 · 임베디드</title>
+<meta name="description" content="S32K312EVB-Q172를 3D로 돌려 보며 1~6주차(UART, GPIO, IPL/MCAL, I2C, 인터럽트, ADC)를 따라가는 페이지">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect x=%277%27 y=%277%27 width=%2718%27 height=%2718%27 rx=%273%27 fill=%27%232B2C29%27/%3E%3Cpath d=%27M3 12h4M3 20h4M25 12h4M25 20h4M12 3v4M20 3v4M12 25v4M20 25v4%27 stroke=%27%238E8C85%27 stroke-width=%272%27/%3E%3Ccircle cx=%2721%27 cy=%2711%27 r=%273%27 fill=%27%23E8412C%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="board3d.css">
+</head>
+<body>
+<header class="topbar">
+  <a href="../index.html">embedded-visual / 2026-2</a>
+  <span>3d · board</span>
+</header>
+
+<main class="page wide">
+  <section class="hero">
+    <div class="kicker">S32K312EVB-Q172 · 3D 보드 · 1~6주차</div>
+    <h1>보드를 돌려 보며 신호를 따라가기</h1>
+    <p class="lede">그림으로만 보던 <code>PTA16 → OpenSDA → USB</code>, <code>PTA29 → LED</code>, <code>PTC6/7 → LCD</code>, <code>PTB26 → ISR</code>, <code>PTA11 → ADC1_S10</code>을 실제 보드 모양 위에서 따라가 봐요. 부품에 마우스를 올리면 이름이, 누르면 설명이 나와요.</p>
+    <a class="easy-top" href="../easy/index.html">처음이면 <b>5분 요약</b>부터 보고 와요 →</a>
+  </section>
+
+  <a class="resume" id="resume" href="#b3d" hidden><small>이어서 보기</small><b></b></a>
+
+  <div class="b3d" id="b3d">
+    <nav class="b3d-modes" id="tabs" aria-label="보기 모드"></nav>
+
+    <div class="stage-wrap">
+      <figure class="stage" id="stage" tabindex="0" aria-label="S32K312EVB-Q172 3D 보드. 드래그로 회전, 클릭 후 휠로 확대. 방향키로 단계 이동">
+        <canvas id="c"></canvas>
+        <div id="labels"></div>
+        <div id="tip" role="tooltip"></div>
+        <div class="stage-tools">
+          <span class="grp" role="group" aria-label="시점"><button class="key" data-cam="all" type="button">전체</button><button class="key" data-cam="top" type="button">위에서</button><button class="key" data-cam="chip" type="button">칩</button><button class="key" data-cam="lcd" type="button">LCD</button><button class="key" data-cam="pc" type="button">PC</button></span>
+        </div>
+        <div class="stage-tools right">
+          <label class="chk"><input type="checkbox" id="optLabels" checked><span>이름표</span></label>
+          <button class="key" id="togglePanel" type="button" title="H">패널 접기</button>
+          <button class="key" id="wideBtn" type="button">넓게</button>
+          <button class="key" id="fsBtn" type="button" title="F">전체화면</button>
+          <button class="key" id="helpBtn" type="button" aria-expanded="false" aria-controls="coach" title="?">도움말</button>
+        </div>
+        <div class="coach" id="coach" role="dialog" aria-label="3D 조작 도움말" hidden>
+          <b>3D 조작</b>
+          <ul>
+            <li><kbd>드래그</kbd> 회전 <span class="t">(터치: 한 손가락)</span></li>
+            <li><kbd>클릭</kbd> 후 <kbd>휠</kbd> 확대 <span class="t">(터치: 두 손가락 벌리기)</span></li>
+            <li><kbd>Shift</kbd>+<kbd>드래그</kbd> 이동</li>
+            <li><kbd>부품 클릭</kbd> 확대 + 설명, 올리면 이름</li>
+            <li><kbd>←</kbd><kbd>→</kbd> 단계 · <kbd>Space</kbd> 재생 · <kbd>1</kbd>~<kbd>7</kbd> 탭</li>
+            <li><kbd>F</kbd> 전체화면 · <kbd>H</kbd> 패널 · <kbd>Esc</kbd> 처음 시점</li>
+          </ul>
+          <button class="key" id="coachOk" type="button">알겠어요</button>
+        </div>
+        <div class="stage-lock" aria-hidden="true">탭해서 3D 조작 켜기</div>
+        <div class="stage-load" id="load">3D 보드를 불러오는 중…</div>
+        <div class="stage-fail" id="fail" hidden>
+          <b>이 브라우저에서는 3D(WebGL)를 쓸 수 없어요</b>
+          <p>하드웨어 가속이 꺼져 있거나 지원되지 않는 환경이에요. 대신 주차별 페이지에서 같은 내용을 그림으로 볼 수 있어요.</p>
+          <a class="key" href="w1-uart.html">W1 UART부터 →</a>
+        </div>
+        <div id="err"></div>
+      </figure>
+      <figcaption class="status" id="status" aria-live="polite">부품에 마우스를 올려 보세요.</figcaption>
+      <dl class="legend" aria-label="색 의미">
+        <div><i class="dot on"></i>빨강 · LED, 버튼, 인터럽트</div>
+        <div><i class="dot data"></i>청록 · SDA, UART, 데이터</div>
+        <div><i class="dot clk"></i>호박 · SCL, 클럭</div>
+      </dl>
+    </div>
+
+    <aside class="widget side3d" id="panel" aria-label="단계별 설명">
+      <div class="panel-head"><div class="widget-title" id="kicker"></div><button class="mini" id="copyLink" type="button" title="지금 보는 주차·단계의 주소를 복사해요">링크 복사</button></div>
+      <h2 id="mtitle"></h2>
+      <a class="easy-top" id="modeLink" href="#" hidden></a>
+      <div id="progress"><div id="pills" class="row"></div><div id="stepmeta"></div></div>
+      <div id="sbody" class="prose"></div>
+      <div id="wg"></div>
+      <div class="speed row" id="speed" role="group" aria-label="재생 속도"><span>속도</span><button class="chip" type="button" data-s="0.5">0.5×</button><button class="chip on" type="button" data-s="1">1×</button><button class="chip" type="button" data-s="2">2×</button></div>
+      <div class="row" id="ctl">
+        <button class="key" id="prev" type="button">← 이전</button>
+        <button class="key play" id="play" type="button">▶ 재생</button>
+        <button class="key" id="next" type="button">다음 →</button>
+      </div>
+    </aside>
+  </div>
+
+  <p class="hint src">모델은 NXP <b>S32K312EVB-Q172 HWUM(REV A3)</b>의 보드 사진·표를 보고 만든 <b>개념 모델</b>이에요. 부품 위치·핀 번호는 사진에서 읽은 상대 배치이고 mm 단위 복제가 아니에요. 핀 이름과 신호 경로(PTA16, PTA29, PTB26, PTA11 등)는 수업 자료 기준이에요.</p>
+
+  <nav class="pagenav" aria-label="페이지 이동">
+    <a href="../easy/index.html" class="pn prev"><small>← 처음이면</small>5분 요약판</a>
+    <a href="../index.html" class="pn hub"><small>처음으로</small>보드 허브</a>
+    <a href="w1-uart.html" class="pn next"><small>다음 →</small>W1 · S32K3 개요와 UART</a>
+  </nav>
+</main>
+
+<script type="module" src="../assets/js/core.js"></script>
+<script type="module" src="board3d/main.js"></script>
+</body>
+</html>
