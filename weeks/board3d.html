@@ -19,7 +19,7 @@
   <section class="hero">
     <div class="kicker">S32K312EVB-Q172 · 3D 보드 · 1~6주차</div>
     <h1>보드를 돌려 보며 신호를 따라가기</h1>
-    <p class="lede">그림으로만 보던 <code>PTA16 → OpenSDA → USB</code>, <code>PTA29 → LED</code>, <code>PTC6/7 → LCD</code>, <code>PTB26 → ISR</code>, <code>PTA11 → ADC1_S10</code>을 실제 보드 모양 위에서 따라가 봐요. 부품에 마우스를 올리면 이름이, 누르면 설명이 나와요.</p>
+    <p class="lede">부품을 누르면 설명이 나오고, 1~6주차 신호 경로를 보드 위에서 따라가요.</p>
     <a class="easy-top" href="../easy/index.html">처음이면 <b>5분 요약</b>부터 보고 와요 →</a>
   </section>
 
@@ -33,6 +33,7 @@
         <canvas id="c"></canvas>
         <div id="labels"></div>
         <div id="tip" role="tooltip"></div>
+        <div id="pcard" class="pcard" hidden></div>
         <div class="stage-tools">
           <span class="grp" role="group" aria-label="시점"><button class="key" data-cam="all" type="button">전체</button><button class="key" data-cam="top" type="button">위에서</button><button class="key" data-cam="chip" type="button">칩</button><button class="key" data-cam="lcd" type="button">LCD</button><button class="key" data-cam="pc" type="button">PC</button></span>
         </div>
@@ -56,7 +57,7 @@
           <button class="key" id="coachOk" type="button">알겠어요</button>
         </div>
         <div class="stage-lock" aria-hidden="true">탭해서 3D 조작 켜기</div>
-        <div class="stage-load" id="load">3D 보드를 불러오는 중…</div>
+        <div class="stage-load" id="load"><span class="ld-bar"></span>3D 보드를 불러오는 중…</div>
         <div class="stage-fail" id="fail" hidden>
           <b>이 브라우저에서는 3D(WebGL)를 쓸 수 없어요</b>
           <p>하드웨어 가속이 꺼져 있거나 지원되지 않는 환경이에요. 대신 주차별 페이지에서 같은 내용을 그림으로 볼 수 있어요.</p>
