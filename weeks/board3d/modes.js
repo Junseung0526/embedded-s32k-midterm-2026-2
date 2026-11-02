@@ -5,6 +5,7 @@ EV.cleanup=[];
 const pre=s=>'<pre>'+s+'</pre>';
 const K=s=>`<span class="k">${s}</span>`, Cm=s=>`<span class="c">${s}</span>`, Hh=s=>`<span class="h">${s}</span>`;
 const note=s=>`<div class="note">${s}</div>`, warn=s=>`<div class="warn">${s}</div>`;
+const ask=s=>`<div class="ask"><small>먼저 생각해 보세요</small>${s}</div>`, keyline=s=>`<div class="keyline"><small>핵심 한 줄</small>${s}</div>`;
 EV.lib = {pre,K,Cm,Hh,note,warn};
 const wg = html => { const e=$('wg'); e.innerHTML=html; return e; };
 EV.wg = wg;
@@ -16,17 +17,17 @@ EV.tpath = tpath;
 /* ---------- 칩 내부 블록 (홀로그램) ---------- */
 const DIE_Y=4.2, DS=1.0;
 const DD = {
-  core:[0,-.4,2.6,1.7,'Cortex-M7','120 MHz',0x4f7cff],
-  nvic:[0,1.7,2.6,1.0,'NVIC','pending · 우선순위',0x9b6cff],
-  clk:[0,-2.55,2.6,1.2,'클럭 MC_CGM','FIRC·SIRC·FXOSC→PLL',0xffb347],
-  cflash:[-4.1,-2.6,2.4,1.2,'Code Flash','코드·RO',0x2f9c7e],
-  dflash:[-4.1,-1.2,2.4,1.0,'Data Flash','설정값',0x2f9c7e],
-  sram:[-4.1,.1,2.4,1.1,'SRAM','변수·스택',0x3a86d1],
-  tcm:[-4.1,1.5,2.4,1.0,'TCM','빠른 메모리',0x3a86d1],
-  siul2:[4.1,-2.6,2.4,1.2,'SIUL2','MSCR·GPDO',0xe56b6f],
-  uart:[4.1,-1.2,2.4,1.0,'LPUART6','TX · RX',0xff9f43],
-  i2c:[4.1,.1,2.4,1.0,'LPI2C1','SDA · SCL',0xe3b53a],
-  adc:[4.1,1.5,2.4,1.0,'ADC1','S10 ← PTA11',0xb36bff],
+  core:[0,-.4,2.6,1.7,'Cortex-M7','120 MHz',0x5f7a99],
+  nvic:[0,1.7,2.6,1.0,'NVIC','pending · 우선순위',0x5f7a99],
+  clk:[0,-2.55,2.6,1.2,'클럭 MC_CGM','FIRC·SIRC·FXOSC→PLL',0x5f7a99],
+  cflash:[-4.1,-2.6,2.4,1.2,'Code Flash','코드·RO',0x6f8079],
+  dflash:[-4.1,-1.2,2.4,1.0,'Data Flash','설정값',0x6f8079],
+  sram:[-4.1,.1,2.4,1.1,'SRAM','변수·스택',0x6f8079],
+  tcm:[-4.1,1.5,2.4,1.0,'TCM','빠른 메모리',0x6f8079],
+  siul2:[4.1,-2.6,2.4,1.2,'SIUL2','MSCR·GPDO',0x8c7d6c],
+  uart:[4.1,-1.2,2.4,1.0,'LPUART6','TX · RX',0x8c7d6c],
+  i2c:[4.1,.1,2.4,1.0,'LPI2C1','SDA · SCL',0x8c7d6c],
+  adc:[4.1,1.5,2.4,1.0,'ADC1','S10 ← PTA11',0x8c7d6c],
 };
 const die = new T.Group(); die.userData.mode=true; die.position.set(EV.CHIP.x,DIE_Y,EV.CHIP.z); die.scale.setScalar(DS);
 const plate = new T.Group();
@@ -38,7 +39,7 @@ const plate = new T.Group();
   const pl=new T.Mesh(new T.PlaneGeometry(pw,pd),new T.MeshBasicMaterial({map:pt.t,transparent:true,depthWrite:false})); pl.rotation.x=-Math.PI/2; pl.position.y=.07; plate.add(pl); }
 plate.position.set(0,-.25,-.55); die.add(plate);
 die.blocks={};
-for(const [k,[x,z,w,d,t,s,c]] of Object.entries(DD)){ const b=EV.slab({w,h:.4,d,color:c,title:t,sub:s,opacity:.97,fs:58}); b.position.set(x,.05,z); die.add(b); die.blocks[k]=b; b.userData.base=c; }
+for(const [k,[x,z,w,d,t,s,c]] of Object.entries(DD)){ const b=EV.slab({w,h:.4,d,color:c,title:t,sub:s,opacity:.97,fs:58}); b.position.set(x,.05,z); die.add(b); die.blocks[k]=b; b.userData.base=c; b.userData.part='die_'+k; }
 [-2.1,2.1].forEach(x=>{ EV.rbox(.26,.14,6.2,new T.MeshStandardMaterial({color:0x1b3a3c,emissive:0x2fc0c0,emissiveIntensity:.9,roughness:.3,metalness:.3}),x,-.04,-.45,die); });
 { const gm=new T.MeshStandardMaterial({color:0x1b3a3c,emissive:0x2fc0c0,emissiveIntensity:.6,roughness:.3,metalness:.3});
   const link=(x1,x2,z)=>{ EV.rbox(Math.abs(x2-x1),.08,.12,gm,(x1+x2)/2,-.02,z,die); };
@@ -49,9 +50,9 @@ for(const [k,[x,z,w,d,t,s,c]] of Object.entries(DD)){ const b=EV.slab({w,h:.4,d,
   for(let i=0;i<pts.length;i+=2){ const a=pts[i],b=pts[i+1]; const mid=a.clone().add(b).multiplyScalar(.5), len=a.distanceTo(b); const cyl=new T.Mesh(new T.CylinderGeometry(.018,.018,len,8),new T.MeshBasicMaterial({color:new T.Color(0x6ee0e0).multiplyScalar(1.4),transparent:true,opacity:.5,blending:T.AdditiveBlending,depthWrite:false})); cyl.position.copy(mid); cyl.quaternion.setFromUnitVectors(V(0,1,0),b.clone().sub(a).normalize()); die.add(cyl); } }
 EV.reg('die',die); EV.die=die;
 EV.diePos=(k,y=.6)=>die.localToWorld(V(DD[k][0],y,DD[k][1]));
-EV.dieHL=(names=[],color=0xffffff,v=1.0)=>{ for(const k in die.blocks) die.blocks[k].setGlow(names.includes(k)?v:0, names.includes(k)?color:null); };
+EV.dieHL=(names=[],color=0xffffff,v=1.0)=>{ for(const k in die.blocks) die.blocks[k].setGlow(names.includes(k)?v:0, names.includes(k)?0xe8412c:null); };
 /* 칩 내부 신호 경로: 이름 배열 → 월드 좌표 */
-EV.diePath=(name,keys,color,y=.75)=>tpath(name, keys.map(k=>typeof k==='string'?EV.diePos(k,y):k), color);
+EV.diePath=(name,keys,color,y=.75)=>tpath(name, keys.map(k=>typeof k==='string'?EV.diePos(k,y):k), 0x2fc0c0);
 
 /* ---------- 층 쌓기 슬랩 묶음 ---------- */
 EV.makeStack=(name,items,o={})=>{
@@ -120,20 +121,38 @@ const INFO = {
  touchB:{t:'TOUCH_B 터치 패드',s:'정전식 전극',h:'정전식 터치 전극. 보드에 터치 패드 2개가 있어요.'},
 };
 EV.partInfo=INFO;
+const DIEINFO = {
+ core:['Cortex-M7 코어','120 MHz · 명령을 실행하는 CPU','C 코드가 실제로 실행되는 곳. 변수는 SRAM에, 주변장치 제어는 레지스터 읽기/쓰기로 해요.'],
+ nvic:['NVIC','인터럽트 컨트롤러','인터럽트 요청을 모아 <b>pending</b> 표시하고 <b>우선순위</b>를 비교해 CPU에 알려줘요.'],
+ clk:['클럭 MC_CGM','FIRC·SIRC·FXOSC → PLL','내부 RC/외부 크리스털/PLL 중 하나를 골라 코어와 주변장치에 클럭을 공급해요. 클럭이 꺼진 모듈은 레지스터를 써도 동작하지 않아요.'],
+ cflash:['Code Flash','프로그램 코드 · 읽기 전용','컴파일된 프로그램과 상수가 저장돼요. 전원을 꺼도 유지되고, 부팅하면 여기서 첫 명령을 가져와요.'],
+ dflash:['Data Flash','설정값 저장','전원을 꺼도 남겨야 하는 설정값 같은 데이터를 저장하는 비휘발성 메모리예요.'],
+ sram:['SRAM','변수 · 스택','전역/지역 변수와 스택이 있는 휘발성 메모리. 여기 값만 바꾸면 보드의 LED 같은 하드웨어는 변하지 않아요.'],
+ tcm:['TCM','코어 전용 빠른 메모리','코어에 바로 붙어 대기 없이 접근되는 메모리. 시간이 중요한 코드·데이터에 써요.'],
+ siul2:['SIUL2','핀 설정(MSCR) · 입출력(GPDO/GPDI)','핀 기능을 고르고 핀 전압을 직접 내보내거나 읽는 블록. GPDO에 1을 쓰면 PTA29가 High가 되어 LED가 켜져요. 외부 인터럽트(EIRQ)도 여기서 만들어요.'],
+ uart:['LPUART6','TX · RX 직렬 통신','PTA16(TX)/PTA15(RX)로 직렬 데이터를 주고받아요. OpenSDA를 거쳐 PC 터미널에 printf가 보여요.'],
+ i2c:['LPI2C1','SDA · SCL 2선 통신','주소로 장치를 부르는 2선 버스. LCD 백팩(PCF8574, 0x27)과 통신해요.'],
+ adc:['ADC1','아날로그 → 디지털 변환','PTA11(ADC1_S10)의 전압을 숫자로 바꿔요. 핀이 곧 채널을 정해요.'],
+};
+for(const k in DIEINFO){ const [t,s,h]=DIEINFO[k]; INFO['die_'+k]={t,s,h}; }
 function showInfo(id){
   const i=INFO[id]; if(!i) return; EV.clearGlow(); EV.glow(id,0xe8412c,.8); EV.focusPart(id);
-  const b=$('sbody'); b.innerHTML=`<h3>${i.t}</h3><p>${i.h}</p>`+(i.w!=null?`<p><button id="goW" style="background:#2a3b86;color:#fff;border:1px solid #5b74e0;border-radius:8px;padding:6px 12px;cursor:pointer">${i.wt} →</button></p>`:'');
+  const b=$('sbody'); b.innerHTML=`<h3>${i.t}</h3><p>${i.h}</p>`+(i.w!=null?`<p><button id="goW" class="key goW">${i.wt} →</button></p>`:'');
   const gb=$('goW'); if(gb) gb.onclick=()=>EV.setMode(i.w);
 }
-EV.onPick=(id)=>{ if(EV.mode===0) showInfo(id); else if(INFO[id]&&EV.modes[EV.mode].pick!==false){ const m=EV.modes[EV.mode]; /* 다른 모드에서는 이름만 */ } };
+const pcard=$('pcard');
+EV.hideCard=()=>{ if(pcard) pcard.hidden=true; };
+function showCard(id){ const i=INFO[id]; if(!i||!pcard) return; pcard.innerHTML=`<button class="x" type="button" aria-label="닫기">×</button><b>${i.t}</b><small>${i.s||''}</small><p>${i.h}</p>`; pcard.hidden=false; pcard.querySelector('.x').onclick=EV.hideCard; }
+EV.onPick=(id)=>{ if(typeof id!=='string'||!INFO[id]) return; if(EV.mode===0&&!id.startsWith('die_')) { EV.hideCard(); showInfo(id); } else showCard(id); };
+$('panel').addEventListener('click',EV.hideCard); $('tabs').addEventListener('click',EV.hideCard);
 
 const modes=EV.modes;
 modes.push({id:'board',tab:'보드 둘러보기',kicker:'S32K312EVB-Q172 · 개념 3D 모델',title:'보드를 돌려 보고, 부품을 눌러 보세요',
  steps:null,
  enter(){
    EV.resetScene(); EV.flyTo(EV.home);
-   EV.labels(['chip','opensda','usb','led','sw5','pot','lcd','pcf','pc']); EV.autoRotate=true;
-   $('sbody').innerHTML=`<p>레포(<code>embedded-s32k-midterm-2026-2</code>)의 1~6주차 내용을 보드 위에서 직접 따라가 볼 수 있어요.</p>
+   EV.labels(['chip','led','sw5','pot','lcd']); EV.autoRotate=true; EV.idle=7;
+   $('sbody').innerHTML=`<p>1~6주차 내용을 실제 보드 위에서 직접 따라가 볼 수 있어요.</p>
    <p>① 부품을 <b>클릭</b>하면 설명과 해당 주차로 가는 버튼이 나와요.<br>② 위 탭에서 <b>W1~W6</b>을 고르면 단계별로 3D 애니메이션이 재생돼요.</p>
    <table><tr><th>주차</th><th>주제</th><th>볼 부품</th></tr>
    <tr><td>W1</td><td>UART·부팅·클럭·메모리맵</td><td>칩, OpenSDA, PC</td></tr>
@@ -158,7 +177,7 @@ function drawUartScope(ch,prog,title){
     c.strokeStyle='#26335f'; c.lineWidth=2;
     for(let i=0;i<=n;i++){ c.beginPath(); c.moveTo(x0+i*dx,130); c.lineTo(x0+i*dx,440); c.stroke(); }
     c.font='30px system-ui,sans-serif'; c.textAlign='center';
-    for(let i=0;i<n;i++){ c.fillStyle=i===1?'#ff9b9b':(i===10?'#9bffb8':(i>1&&i<10?'#35c4c4':'#7d8bb8')); c.fillText(lab[i],x0+(i+.5)*dx,172);
+    for(let i=0;i<n;i++){ c.fillStyle=i===1?'#ff8f8f':(i===10?'#9bffb8':(i>1&&i<10?'#35c4c4':'#7d8bb8')); c.fillText(lab[i],x0+(i+.5)*dx,172);
       if(i>1&&i<10){ c.fillStyle='#fff'; c.font='bold 40px monospace'; c.fillText(f[i],x0+(i+.5)*dx,420); c.font='30px system-ui,sans-serif'; } }
     c.fillStyle='#7d8bb8'; c.textAlign='right'; c.fillText('HIGH',100,236); c.fillText('LOW',100,366);
     EV.drawDigital(c,f,x0,x1,220,150,'#4ade80',prog,7);
@@ -200,7 +219,7 @@ modes.push({id:'w1',tab:'W1 UART',kicker:'1주차 · chap01_hello_uart · LPUART
     const e=wg(`<div class="box"><div class="row"><button id="bPll" class="on">PLL 켜기</button><button id="bUc" class="on">LPUART6 클럭 enable</button></div><div id="clkOut" style="font-size:12.5px;line-height:1.6"></div></div>`);
     const upd=()=>{ EV.pathFlow('c_core',st.pll,.25); EV.pathFlow('c_uart',st.uart,.25);
       EV.dieHL(['clk',...(st.uart?['uart']:[]),'core'],0xffb347,.8); if(!st.uart) EV.dieHL(['clk','core'],0xffb347,.8);
-      $('clkOut').innerHTML=`코어 클럭: <b>${st.pll?'PLL → 120 MHz':'FIRC (리셋 직후, 느림)'}</b><br>LPUART6_CLK: <b style="color:${st.uart?'#6effa0':'#ff8f8f'}">${st.uart?'30 MHz 공급 중':'차단 → UART 동작 안 함'}</b>`;
+      $('clkOut').innerHTML=`코어 클럭: <b>${st.pll?'PLL → 120 MHz':'FIRC (리셋 직후, 느림)'}</b><br>LPUART6_CLK: <b style="color:${st.uart?'var(--ok)':'var(--on)'}">${st.uart?'30 MHz 공급 중':'차단 → UART 동작 안 함'}</b>`;
       $('bPll').classList.toggle('on',st.pll); $('bUc').classList.toggle('on',st.uart); };
     $('bPll').onclick=()=>{st.pll=!st.pll;upd();}; $('bUc').onclick=()=>{st.uart=!st.uart;upd();}; upd();
   }},
@@ -246,7 +265,7 @@ modes.push({id:'w1',tab:'W1 UART',kicker:'1주차 · chap01_hello_uart · LPUART
   enter(){
     EV.markPins(['TX']); EV.labels(['pTX','opensda','usb','pc'],['pTX']); EV.show('scope'); EV.scope.show(true);
     EV.glow('opensda',0xff9f43,.5); drawUartScope('H',1);
-    wg(`<div class="box"><div class="row"><input id="uTxt" type="text" value="Hello S32K3" style="width:170px"><button id="uSend">보내기</button><button id="uClr">화면 지우기</button></div><div style="font-size:12px;color:#9aa6cf">'A'(0x41) = 01000001 → 전송순서 D0부터: 1 0 0 0 0 0 1 0</div></div>`);
+    wg(`<div class="box"><div class="row"><input id="uTxt" type="text" value="Hello S32K3" style="width:170px"><button id="uSend">보내기</button><button id="uClr">화면 지우기</button></div><div style="font-size:12px;color:var(--ink-2)">'A'(0x41) = 01000001 → 전송순서 D0부터: 1 0 0 0 0 0 1 0</div></div>`);
     $('uSend').onclick=()=>send($('uTxt').value+'\r\n'); $('uClr').onclick=()=>EV.term.clear();
   },
   play(){ EV.term.clear(); send(UART_TXT); }}
@@ -269,10 +288,11 @@ function bitsWidget(el,val,fields,onChange){ // 32비트 클릭 위젯
 modes.push({id:'w2',tab:'W2 GPIO',kicker:'2주차 · chap02_gpio_bare · PTA29 = D13 LED',title:'주소에 값을 쓰면 LED가 켜진다',
  steps:[
  {t:'같은 문장, 다른 결과 (Memory-Mapped I/O)',cam:{tx:1,ty:3.5,tz:-1,rad:19,th:.4,ph:.85},
-  html:`<p>RAM·Flash·레지스터가 한 주소 공간에 있고, CPU는 <b>같은 store 명령</b>을 써요.</p>
+  html:`${ask('같은 <code>*ptr = 1</code>인데, 어느 주소에 쓰느냐에 따라 LED가 켜질까요? 오른쪽 버튼 두 개를 누르기 전에 먼저 예측해 보세요.')}<p>RAM·Flash·레지스터가 한 주소 공간에 있고, CPU는 <b>같은 store 명령</b>을 써요.</p>
   ${pre(`${K('#define')} STATUS_REG (*(${K('volatile')} uint32_t *) 0x40000000UL)
 ${K('while')} (STATUS_REG == 0U) { }  ${Cm('// volatile 없으면 1회만 읽고 무한루프')}`)}
-  <p><b>volatile</b> = "이 접근을 <b>매번 실제로</b> 수행하고, 생략·재배치하지 마라." 없으면 LED 쓰기가 삭제되거나 Delay 루프가 통째로 사라져 점멸이 멈춰요.</p>`,
+  <p><b>volatile</b> = "이 접근을 <b>매번 실제로</b> 수행하고, 생략·재배치하지 마라." 없으면 LED 쓰기가 삭제되거나 Delay 루프가 통째로 사라져 점멸이 멈춰요.</p>
+  ${keyline('레지스터도 그냥 <b>주소</b>예요. SRAM에 쓰면 변수만 바뀌고, <b>GPDO 주소</b>에 쓰면 핀 전압이 바뀌어 LED가 켜져요.')}`,
   enter(){
     EV.show('die'); EV.dieHL(['core']); EV.labels(['led'],[]);
     EV.diePath('toSram',['core',V(EV.diePos('core').x-1.9,EV.diePos('core').y,EV.diePos('core').z),V(EV.diePos('sram').x+1.0,EV.diePos('sram').y,EV.diePos('sram').z),'sram'],0x6ea8ff);
@@ -282,9 +302,10 @@ ${K('while')} (STATUS_REG == 0U) { }  ${Cm('// volatile 없으면 1회만 읽고
     $('aP').onclick=()=>{ EV.led(false); EV.dieHL(['core']); EV.pathSend('toSiul',1.1,()=>{ EV.dieHL(['core','siul2'],0xff8f8f,1); EV.pathSend('chipLED',.9,()=>{ EV.led(true); $('aOut').innerHTML='GPDO에 쓰기 → <b>핀 전압 변화 → LED 점등</b>'; }); }); };
   }},
  {t:'SIUL2의 MSCR: 이 핀을 무엇으로 쓸까 (먹스)',cam:{tx:1.5,ty:3,tz:-1,rad:17,th:.3,ph:.95},
-  html:`<p><b>SIUL2</b>는 핀 기능·GPIO 입출력·핀 다중화·입력 신호 라우팅·출력 드라이버를 맡는 주변장치예요.</p>
+  html:`${ask('하나의 핀을 GPIO로 쓸지 UART로 쓸지는 누가 정할까요?')}<p><b>SIUL2</b>는 핀 기능·GPIO 입출력·핀 다중화·입력 신호 라우팅·출력 드라이버를 맡는 주변장치예요.</p>
   <table><tr><th>레지스터</th><th>역할</th></tr><tr><td>MSCR[n]</td><td>핀 속성: 출력/입력 enable, mux(핀 기능), 전기적 속성</td></tr><tr><td>IMCR[n]</td><td>주변장치 <b>입력</b> 신호가 받을 Pad 선택</td></tr><tr><td>GPDO[n] / GPDI[n]</td><td>GPIO 출력값 쓰기 / 입력값 읽기</td></tr></table>
-  <p>MSCR의 <b>SSS</b> 필드가 먹스 선택선이에요. 아래에서 바꿔 보세요.</p>`,
+  <p>MSCR의 <b>SSS</b> 필드가 먹스 선택선이에요. 아래에서 바꿔 보세요.</p>
+  ${keyline('MSCR의 <b>SSS</b>가 핀의 역할을 고르는 스위치예요. GPIO가 아니면 GPDO에 값을 써도 핀으로 나가지 않아요.')}`,
   enter(){
     const g=new T.Group(); g.userData.mode=true; g.position.set(0,3.2,-.5);
     const ins=[['GPIO','SSS = 0000b',0xe56b6f],['LPUART TX','SSS = ALT',0xff9f43],['eMIOS','SSS = ALT',0xb36bff]];
@@ -300,26 +321,28 @@ ${K('while')} (STATUS_REG == 0U) { }  ${Cm('// volatile 없으면 1회만 읽고
     ['s0','s1','s2'].forEach((id,i)=>$(id).onclick=()=>sel(i)); sel(0);
   }},
  {t:'MSCR 비트와 주소 계산',cam:{tx:1,ty:3,tz:-1,rad:19,th:.4,ph:.85},
-  html:`<p>GPIO 출력으로 만들려면 <b>① SSS=0000b(GPIO)</b> <b>② OBE(비트 21) Set</b>. 다른 필드를 건드리지 않게 <b>Read-Modify-Write</b>로요.</p>
+  html:`${ask('핀을 GPIO <b>출력</b>으로 만들려면 MSCR의 어느 비트를 어떻게 바꿔야 할까요?')}<p>GPIO 출력으로 만들려면 <b>① SSS=0000b(GPIO)</b> <b>② OBE(비트 21) Set</b>. 다른 필드를 건드리지 않게 <b>Read-Modify-Write</b>로요.</p>
   ${pre(`reg |=  (1U << n);        ${Cm('// Set')}
 reg &= ~(1U << n);        ${Cm('// Clear')}
 reg ^=  (1U << n);        ${Cm('// Toggle')}
 reg = (reg & ~mask) | value; ${Cm('// 필드 변경')}`)}
-  <p>주소: <code>MSCR[n] = 0x40290000 + 0x0240 + 4×n</code></p>`,
+  <p>주소: <code>MSCR[n] = 0x40290000 + 0x0240 + 4×n</code></p>
+  ${keyline('<b>SSS=0000b</b> + <b>OBE=1</b>. 나머지 비트는 건드리지 않게 <b>Read-Modify-Write</b>로 바꿔요.')}`,
   enter(){
     EV.show('die'); EV.dieHL(['siul2'],0xe56b6f,1); EV.labels([]);
-    const e=wg(`<div class="box"><div style="font-size:12px;color:#9aa6cf;margin-bottom:2px">MSCR[n] 32비트 (클릭해서 토글) — 파란 테두리: OBE(21), SSS[3:0]</div><div id="bw"></div><div class="row"><span>n =</span><input id="mn" type="number" value="29" min="0" max="511"><span id="mAddr"></span></div><div id="mOut2" style="font-size:12.5px"></div></div>`);
+    const e=wg(`<div class="box"><div style="font-size:12px;color:var(--ink-2);margin-bottom:2px">MSCR[n] 32비트 (클릭해서 토글) — 파란 테두리: OBE(21), SSS[3:0]</div><div id="bw"></div><div class="row"><span>n =</span><input id="mn" type="number" value="29" min="0" max="511"><span id="mAddr"></span></div><div id="mOut2" style="font-size:12.5px"></div></div>`);
     let w;
     const upd=(v)=>{ const n=+$('mn').value||0; const addr=0x40290000+0x240+4*n; const obe=(v>>>21)&1, sss=v&15;
-      $('mAddr').innerHTML=`→ 주소 <code>${hex(addr,8)}</code>`; $('mOut2').innerHTML=`값 <code>${hex(v>>>0,8)}</code> · OBE=<b>${obe}</b> · SSS=<b>${sss.toString(2).padStart(4,'0')}b</b> → ${obe&&sss===0?'<b style="color:#6effa0">GPIO 출력으로 설정됨</b>':'아직 GPIO 출력이 아니에요 (OBE=1, SSS=0000b 필요)'}`; if(obe&&sss===0) EV.glow('led',0xff8f8f,.3); else EV.clearGlow(); };
+      $('mAddr').innerHTML=`→ 주소 <code>${hex(addr,8)}</code>`; $('mOut2').innerHTML=`값 <code>${hex(v>>>0,8)}</code> · OBE=<b>${obe}</b> · SSS=<b>${sss.toString(2).padStart(4,'0')}b</b> → ${obe&&sss===0?'<b style="color:var(--ok)">GPIO 출력으로 설정됨</b>':'아직 GPIO 출력이 아니에요 (OBE=1, SSS=0000b 필요)'}`; if(obe&&sss===0) EV.glow('led',0xff8f8f,.3); else EV.clearGlow(); };
     w=bitsWidget($('bw'),0,[{hi:21,lo:21},{hi:3,lo:0}],upd); $('mn').oninput=()=>upd(w.get()); upd(0);
   }},
  {t:'GPDO는 4개씩 거꾸로 놓여 있다',cam:{tx:1.2,ty:2.5,tz:-1,rad:15,th:.25,ph:1.0},
-  html:`<p><code>GPDO</code>는 8비트 레지스터 배열(<code>0x1300~</code>)인데 <b>워드(4개) 단위로 역순</b>이에요.</p>
+  html:`${ask('GPIO 29번의 출력 레지스터는 <code>0x131D</code>일까요, <code>0x131E</code>일까요? 아래에서 i를 바꿔 확인해 보세요.')}<p><code>GPDO</code>는 8비트 레지스터 배열(<code>0x1300~</code>)인데 <b>워드(4개) 단위로 역순</b>이에요.</p>
   <table><tr><th>오프셋</th><th>레지스터</th><th>오프셋</th><th>레지스터</th></tr><tr><td>0x1300</td><td>GPDO3</td><td>0x131C</td><td>GPDO31</td></tr><tr><td>0x1301</td><td>GPDO2</td><td>0x131D</td><td>GPDO30</td></tr><tr><td>0x1302</td><td>GPDO1</td><td>0x131E</td><td><b>GPDO29</b></td></tr><tr><td>0x1303</td><td>GPDO0</td><td>0x131F</td><td>GPDO28</td></tr></table>
   ${pre(`${K('#define')} SIUL2_GPDO_BYTE_OFFSET(i) \\
   (0x1300UL + (((i) & ~3UL) + (3UL - ((i) & 3UL))))`)}
-  ${warn('MSCR 번호와 GPIO 번호는 <b>서로 다른 레지스터의 인덱스</b>. 한 변수로 취급하면 안 돼요.')}`,
+  ${warn('MSCR 번호와 GPIO 번호는 <b>서로 다른 레지스터의 인덱스</b>. 한 변수로 취급하면 안 돼요.')}
+  ${keyline('GPDO는 4개씩 뒤집혀 있어서 <code>0x1300 + (i &amp; ~3) + (3 − (i &amp; 3))</code>. GPIO29 → <b>0x131E</b>.')}`,
   enter(){
     const g=new T.Group(); g.userData.mode=true; g.position.set(0,2.6,-.5); g.cells=[];
     for(let c=0;c<4;c++){ const s=EV.slab({w:1.9,h:.6,d:2.0,color:0x3a6fd1,title:'',sub:'',fs:40}); s.position.set(-3.15+c*2.1,0,0); g.add(s); g.cells.push(s); }
@@ -331,7 +354,7 @@ reg = (reg & ~mask) | value; ${Cm('// 필드 변경')}`)}
     $('gi').oninput=upd; upd();
   }},
  {t:'GPDO29에 1을 써서 LED 켜기',cam:{tx:2,ty:2,tz:-2.5,rad:17,th:.2,ph:.9},
-  html:`<p>D13 LED = <b>PTA29</b>, <b>Active High</b>(1=점등). 두 가지 접근:</p>
+  html:`${ask('MSCR 설정과 GPDO 쓰기를 합치면 LED는 어떻게 될까요? 버튼으로 확인해 보세요.')}<p>D13 LED = <b>PTA29</b>, <b>Active High</b>(1=점등). 두 가지 접근:</p>
   ${pre(`${Cm('// 직접 주소')}
 SIUL2_MSCR(29U)  = (MSCR & ~SSS) | OBE;
 SIUL2_GPDO(29U)  = 1U;
@@ -339,18 +362,19 @@ ${Cm('// SDK 헤더')}
 IP_SIUL2->MSCR[29] = value;
 IP_SIUL2->GPDO29   = 1U;`)}
   <table><tr><th>비교</th><th>직접 주소</th><th>SDK 헤더</th></tr><tr><td>레지스터 구조 이해</td><td>높음</td><td>낮음</td></tr><tr><td>가독성/이식성</td><td>낮음</td><td>높음</td></tr><tr><td>오타 위험</td><td>높음</td><td>낮음</td></tr></table>
-  <p>Active Low였다면 1은 소등이에요. <b>보드 매뉴얼(HWUM) → IOMUX 표 → RTD 헤더</b> 순으로 핀 정보를 확인하세요.</p>`,
+  <p>Active Low였다면 1은 소등이에요. <b>보드 매뉴얼(HWUM) → IOMUX 표 → RTD 헤더</b> 순으로 핀 정보를 확인하세요.</p>
+  ${keyline('<b>MSCR로 출력 설정 → GPDO29에 1 → LED 점등</b>(Active High). 3주차에서는 이 과정을 <b>IPL/MCAL</b>이 대신 해줘요.')}`,
   enter(){
     EV.show('die'); EV.dieHL(['core']); EV.labels(['led','pLED'],['led']); EV.markPins(['LED']);
     EV.diePath('wr',['core',V(EV.diePos('core').x+1.9,EV.diePos('core').y,EV.diePos('core').z),V(EV.diePos('siul2').x-1.0,EV.diePos('siul2').y,EV.diePos('siul2').z),'siul2'],0xff8f8f);
     let on=false;
     wg(`<div class="box"><div class="row"><button id="g1">GPDO29 = 1</button><button id="g0">GPDO29 = 0</button><button id="gb">Delay 점멸</button></div><div id="gOut2" style="font-size:12.5px">현재: LED 꺼짐</div></div>`);
-    const write=(v,cb)=>{ EV.dieHL(['core']); EV.pathSend('wr',.8,()=>{ EV.dieHL(['core','siul2'],0xff8f8f,1); EV.pathSend('chipLED',.7,()=>{ EV.led(v); $('gOut2').innerHTML='현재: LED '+(v?'<b style="color:#ff8f8f">켜짐</b>':'꺼짐'); cb&&cb(); }); }); };
+    const write=(v,cb)=>{ EV.dieHL(['core']); EV.pathSend('wr',.8,()=>{ EV.dieHL(['core','siul2'],0xff8f8f,1); EV.pathSend('chipLED',.7,()=>{ EV.led(v); $('gOut2').innerHTML='현재: LED '+(v?'<b style="color:var(--on)">켜짐</b>':'꺼짐'); cb&&cb(); }); }); };
     $('g1').onclick=()=>write(1); $('g0').onclick=()=>write(0);
     let blink=false; $('gb').onclick=()=>{ blink=!blink; if(!blink) return; let v=0; const loop=()=>{ if(!blink) return; v^=1; write(v,()=>EV.wait(.5,loop)); }; loop(); };
     EV.cleanup.push(()=>{ blink=false; });
   },
-  play(){} }
+  play(){ const b=$('g1'); if(b) b.click(); } }
  ]});
 
 /* ===================== W3 IPL vs MCAL ===================== */
@@ -419,7 +443,7 @@ function drawI2c(addr,data,prog){
     c.fillStyle='#E9A23B'; c.font='bold 34px sans-serif'; c.fillText('SCL',30,200); c.fillStyle='#35c4c4'; c.fillText('SDA',30,380);
     c.strokeStyle='#26335f'; c.lineWidth=1.5; const dx=(x1-x0)/n;
     w.marks.forEach(([i,l])=>{ if(!l) return; const x=x0+i*dx; c.strokeStyle=l==='ACK'?'#2b5a3a':'#26335f'; c.beginPath(); c.moveTo(x,100); c.lineTo(x,440); c.stroke();
-      c.fillStyle=l==='ACK'?'#6effa0':(l==='S'?'#ff9b9b':'#9aa6cf'); c.font='bold 22px monospace'; c.textAlign='left'; c.fillText(l,x+3,100); });
+      c.fillStyle=l==='ACK'?'#6effa0':(l==='S'?'#ff8f8f':'#9aa6cf'); c.font='bold 22px monospace'; c.textAlign='left'; c.fillText(l,x+3,100); });
     EV.drawDigital(c,w.scl,x0,x1,140,90,'#E9A23B',prog,5); EV.drawDigital(c,w.sda,x0,x1,320,90,'#35c4c4',prog,5);
     if(prog<1){ c.strokeStyle='#fff'; c.lineWidth=2; c.setLineDash([8,6]); c.beginPath(); c.moveTo(x0+(x1-x0)*prog,110); c.lineTo(x0+(x1-x0)*prog,440); c.stroke(); c.setLineDash([]); }
     c.fillStyle='#7d8bb8'; c.font='24px system-ui,"Noto Sans KR",sans-serif'; c.textAlign='left'; c.fillText('SCL이 LOW일 때 SDA 변경 · SCL이 HIGH일 때 읽힘 · ACK = 9번째 클럭에서 수신 측이 SDA를 LOW로',40,478);
@@ -446,7 +470,7 @@ modes.push({id:'w4',tab:'W4 I2C·LCD',kicker:'4주차 · LPI2C1 100 kHz · PCF85
     wg(`<div class="box"><div class="row"><button id="o0">Master가 당김</button><button id="o1">PCF8574가 당김</button><button id="o2">다른 장치가 당김</button></div><div id="oOut" style="font-size:13px"></div></div>`);
     const upd=()=>{ const low=g.devs.some(d=>d.pull); lm.color.setHex(low?0x333a55:0x4ade80); lm.emissive.setHex(low?0x000000:0x4ade80); lm.emissiveIntensity=low?0:.8;
       g.devs.forEach((d,i)=>{ d.link.material.color.setHex(d.pull?0xff6b6b:0x4a5688); d.setGlow(d.pull?.9:0,0xff6b6b); $('o'+i).classList.toggle('on',d.pull); });
-      $('oOut').innerHTML=`SDA 레벨: <b style="color:${low?'#ff9b9b':'#6effa0'}">${low?'LOW (0)':'HIGH (1) — 풀업이 올림'}</b>`; };
+      $('oOut').innerHTML=`SDA 레벨: <b style="color:${low?'var(--on)':'var(--ok)'}">${low?'LOW (0)':'HIGH (1) — 풀업이 올림'}</b>`; };
     [0,1,2].forEach(i=>$('o'+i).onclick=()=>{ g.devs[i].pull=!g.devs[i].pull; upd(); }); upd();
   }},
  {t:'I2C 프레임 한 장을 비트 단위로',cam:{tx:1.5,ty:1,tz:-6,rad:22,th:.25,ph:.95},
@@ -475,8 +499,8 @@ modes.push({id:'w4',tab:'W4 I2C·LCD',kicker:'4주차 · LPI2C1 100 kHz · PCF85
   },
   play(){ const g=EV.groups.scan; g.cells.forEach(b=>{ b.material.color.setHex(0x2a3b86); b.material.emissive.setHex(0); }); let found=[];
     EV.tween(6.5,k=>{ const n=Math.floor(k*g.cells.length); g.cells.forEach((b,i)=>{ if(i<=n&&!b.userData.done){ b.userData.done=true; const ack=b.userData.a===0x27; b.material.color.setHex(ack?0x38e07a:0x3d4f9a); b.material.emissive.setHex(ack?0x2bd16b:0x000000); b.material.emissiveIntensity=ack?1.4:0; if(ack){ found.push(b.userData.a); b.position.y=.5; } } });
-      const a=3+Math.min(n,g.cells.length-1); $('scOut').innerHTML=`시험 주소: <code>0x${a.toString(16).toUpperCase().padStart(2,'0')}</code> ${found.length?`· <b style="color:#6effa0">ACK: 0x${found[0].toString(16)}</b>`:'· 응답 없음(NACK)'}`; },
-      ()=>{ $('scOut').innerHTML='완료 — <b style="color:#6effa0">0x27</b>에서 ACK. LCD 백팩 주소를 찾았어요.'; g.cells.forEach(b=>b.userData.done=false); }); }},
+      const a=3+Math.min(n,g.cells.length-1); $('scOut').innerHTML=`시험 주소: <code>0x${a.toString(16).toUpperCase().padStart(2,'0')}</code> ${found.length?`· <b style="color:var(--ok)">ACK: 0x${found[0].toString(16)}</b>`:'· 응답 없음(NACK)'}`; },
+      ()=>{ $('scOut').innerHTML='완료 — <b style="color:var(--ok)">0x27</b>에서 ACK. LCD 백팩 주소를 찾았어요.'; g.cells.forEach(b=>b.userData.done=false); }); }},
  {t:'PCF8574: 1바이트가 LCD 제어선 8개로',cam:{tx:4.6,ty:0,tz:-11.7,rad:13,th:.12,ph:.85},
   html:`<p>PCF8574는 <b>I2C로 받은 1바이트를 8개 출력 핀</b>에 그대로 내보내요. 백팩이 LCD에 배선돼 있어서 <b>1바이트 = LCD 제어선 8개</b>.</p>
   <table><tr><th>핀</th><th>P0</th><th>P1</th><th>P2</th><th>P3</th><th>P4~P7</th></tr><tr><td>LCD</td><td>RS</td><td>R/W</td><td>E</td><td>BL</td><td>DB4~DB7</td></tr></table>
@@ -501,7 +525,7 @@ modes.push({id:'w4',tab:'W4 I2C·LCD',kicker:'4주차 · LPI2C1 100 kHz · PCF85
   enter(){
     EV.labels(['lcd']); EV.lcd.set('Hello S32K3','Count: 0000');
     wg(`<div class="box"><div class="row"><span>DDRAM 주소(hex)</span><input id="dA" type="text" value="40"></div><div id="dOut" style="font-size:12.5px"></div></div>`);
-    const upd=()=>{ const a=parseInt($('dA').value,16)||0; const row=a>=0x40?1:0, col=a&0x3F; $('dOut').innerHTML=`명령 바이트 <code>0x${(0x80|a).toString(16).toUpperCase()}</code> → ${row+1}행 ${col+1}번째 칸`+(col>15?' <b style="color:#ff9b9b">(화면 밖)</b>':''); EV.lcd.cursor=col<16?[row,col]:null; EV.lcd.draw(); };
+    const upd=()=>{ const a=parseInt($('dA').value,16)||0; const row=a>=0x40?1:0, col=a&0x3F; $('dOut').innerHTML=`명령 바이트 <code>0x${(0x80|a).toString(16).toUpperCase()}</code> → ${row+1}행 ${col+1}번째 칸`+(col>15?' <b style="color:var(--on)">(화면 밖)</b>':''); EV.lcd.cursor=col<16?[row,col]:null; EV.lcd.draw(); };
     $('dA').oninput=upd; upd();
   },
   play(){ let n=0; const loop=()=>{ if(n>8) return; EV.lcd.set('Hello S32K3','Count: '+String(n).padStart(4,'0'),[1,7+3]); n++; EV.wait(.6,loop); }; loop(); }},
@@ -522,24 +546,33 @@ modes.push({id:'w5',tab:'W5 인터럽트',kicker:'5주차 · SW5(PTB26) → EIRQ
   html:`${pre(`폴링:     main loop → 버튼 읽기 → 처리 → 버튼 읽기 → ...
 인터럽트: main 실행 중 → 버튼 edge → ${K('ISR 진입')} → 플래그 갱신 → main 복귀`)}
   <p>폴링은 단순하지만 <b>CPU를 낭비</b>하고 늦게 반응할 수 있어요. 인터럽트는 즉각 반응하지만 <b>비동기라 설계가 까다로워요</b>(공유 변수, 실행 순서).</p>
-  <p>이벤트 시각과 폴링 주기를 움직여 보세요.</p>`,
+  <p><b>▶ 재생</b>하면 시간이 흐르면서, 폴링은 <b>다음 읽기 때까지 기다리고</b> 인터럽트는 <b>이벤트 순간 바로</b> 반응해요. 슬라이더로 이벤트 시각과 폴링 주기를 바꿔 보세요.</p>`,
   enter(){
     EV.labels(['sw5'],['sw5']); EV.glow('sw5',0x8affb0,.5); EV.show('scope'); EV.scope.show(true);
     wg(`<div class="box"><div class="row"><span>이벤트 시각</span><input id="pe" type="range" min="1" max="99" value="23"></div><div class="row"><span>폴링 주기</span><input id="pp" type="range" min="10" max="50" value="30"></div><div id="pOut" style="font-size:12.5px"></div></div>`);
-    const draw=()=>{ const E=+$('pe').value, P=+$('pp').value; const poll=Math.ceil(E/P)*P; EV.scope.draw((c,W,H)=>{
+    let raf=0; const stop=()=>{ cancelAnimationFrame(raf); raf=0; };
+    EV.cleanup.push(stop);
+    const draw=(cur=100)=>{ const E=+$('pe').value, P=+$('pp').value; const poll=Math.ceil(E/P)*P; const live=cur<100; EV.scope.draw((c,W,H)=>{
       const x0=170,x1=W-50,X=t=>x0+(x1-x0)*t/100; c.font='bold 40px system-ui,"Noto Sans KR",sans-serif'; c.fillStyle='#e7ebf7'; c.fillText('폴링 vs 인터럽트: 반응 시점',40,60);
       c.font='30px system-ui,"Noto Sans KR",sans-serif'; c.fillStyle='#9aa6cf'; c.fillText('폴링',30,170); c.fillText('인터럽트',30,350);
-      // 폴링 레인
-      c.fillStyle='#26335f'; c.fillRect(x0,140,x1-x0,50); for(let t=P;t<=100;t+=P){ c.fillStyle=t===poll?'#35c4c4':'#6ea8ff'; c.fillRect(X(t)-5,130,10,70); }
-      c.fillStyle='#4ade80'; c.fillRect(X(E)-3,100,6,120); c.font='26px sans-serif'; c.fillText('이벤트',X(E)-30,92);
-      if(poll<=100){ c.fillStyle='#35c4c4'; c.fillText(`반응(+${poll-E})`,X(poll)-40,222); c.strokeStyle='#35c4c4'; c.lineWidth=3; c.beginPath(); c.moveTo(X(E),205); c.lineTo(X(poll),205); c.stroke(); }
-      // 인터럽트 레인
-      c.fillStyle='#26335f'; c.fillRect(x0,320,x1-x0,50); c.fillStyle='#4ade80'; c.fillRect(X(E)-3,280,6,120); c.fillStyle='#c07bff'; c.fillRect(X(E),320,30,50); c.fillStyle='#fff'; c.font='22px sans-serif'; c.fillText('ISR',X(E)+2,352);
-      c.fillStyle='#6effa0'; c.font='26px sans-serif'; c.fillText('즉시 반응(+0)',X(E)+40,352);
+      // 폴링 레인: 읽기 틱은 시간이 지나야 켜진다
+      c.fillStyle='#26335f'; c.fillRect(x0,140,x1-x0,50); for(let t=P;t<=100;t+=P){ c.fillStyle=t>cur?'#3a4a80':(t===poll?'#35c4c4':'#6ea8ff'); c.fillRect(X(t)-5,130,10,70); }
+      if(cur>=E){ c.fillStyle='#4ade80'; c.fillRect(X(E)-3,100,6,120); c.font='26px sans-serif'; c.fillText('이벤트',X(E)-30,92); }
+      if(poll<=100){ const end=Math.min(cur,poll); if(end>E){ c.strokeStyle='#35c4c4'; c.lineWidth=3; c.beginPath(); c.moveTo(X(E),205); c.lineTo(X(end),205); c.stroke(); }
+        c.fillStyle='#35c4c4'; c.font='26px sans-serif'; if(cur>=poll) c.fillText(`반응(+${poll-E})`,X(poll)-40,222); else if(cur>E) c.fillText('다음 읽기까지 대기…',X(E),236); }
+      // 인터럽트 레인: main 실행 중 → 이벤트 순간 ISR
+      c.fillStyle='#26335f'; c.fillRect(x0,320,x1-x0,50);
+      c.fillStyle='#34407a'; c.fillRect(x0,326,(cur>=E?X(E):X(cur))-x0,38); c.fillStyle='#9aa6cf'; c.font='22px sans-serif'; c.fillText('main 실행 중',x0+8,352);
+      if(cur>=E){ c.fillStyle='#4ade80'; c.fillRect(X(E)-3,280,6,120); c.fillStyle='#c07bff'; c.fillRect(X(E),320,30,50); c.fillStyle='#fff'; c.font='22px sans-serif'; c.fillText('ISR',X(E)+2,352);
+        c.fillStyle='#6effa0'; c.font='26px sans-serif'; c.fillText('즉시 반응(+0)',X(E)+40,352); }
+      if(live){ c.strokeStyle='#e7ebf7'; c.lineWidth=2; c.setLineDash([8,8]); c.beginPath(); c.moveTo(X(cur),90); c.lineTo(X(cur),410); c.stroke(); c.setLineDash([]); }
       c.fillStyle='#6ea8ff'; c.font='24px sans-serif'; c.fillText('▮ 버튼 읽기(폴링)',x0,440); });
-      $('pOut').innerHTML=`폴링 지연 <b>+${poll<=100?poll-E:'—'}</b> · 인터럽트 지연 <b>≈0</b>`; };
-    $('pe').oninput=draw; $('pp').oninput=draw; draw();
-  }},
+      $('pOut').innerHTML=live?`시간 흐르는 중…`:`폴링 지연 <b>+${poll<=100?poll-E:'—'}</b> · 인터럽트 지연 <b>≈0</b>`; };
+    EV.pollPlay=()=>{ stop(); let t0=null; const loop=(now)=>{ if(t0==null) t0=now; const cur=Math.min(100,(now-t0)/1000*(100/6)*(EV.speed||1)); EV.hold=1; draw(cur>=100?100:cur); if(cur<100) raf=requestAnimationFrame(loop); else raf=0; }; raf=requestAnimationFrame(loop); };
+    const redraw=()=>{ stop(); draw(100); };
+    $('pe').oninput=redraw; $('pp').oninput=redraw; draw();
+  },
+  play(){ EV.pollPlay&&EV.pollPlay(); }},
  {t:'Cortex-M7 벡터 테이블',cam:{tx:0,ty:5,tz:-.5,rad:21,th:.4,ph:1.2},
   html:`<p>예외·인터럽트 핸들러 주소를 담은 배열 <code>__Vectors[]</code>.</p>
   <table><tr><th>벡터</th><th>내용</th></tr><tr><td>0</td><td>초기 스택 포인터(MSP)</td></tr><tr><td>1</td><td>Reset 핸들러</td></tr><tr><td>2</td><td>NMI</td></tr><tr><td>3</td><td>HardFault</td></tr><tr><td>0~15</td><td>ARM 코어 예외</td></tr><tr><td><b>16~</b></td><td><b>외부 인터럽트 IRQ 0~</b> (NVIC)</td></tr></table>
@@ -576,7 +609,7 @@ ${K('if')} (g_led_request != led) { toggle LED; LCD 출력; }`)}
     EV.defLabel('frcap','스택 프레임<small>8 레지스터 자동 push</small>',v=>v.set(EV.CHIP.x+8.4,4.8,EV.CHIP.z)); EV.labels(['sw5','led','lcd','frcap'],[]);
     EV.lcd.set('Hello S32K3','Count: '+String(irq.count).padStart(4,'0')); EV.led(irq.led);
     irq.busy=false; EV.diePath('i_core',['siul2',V(EV.diePos('nvic').x+0,EV.diePos('siul2').y,EV.diePos('siul2').z),V(EV.diePos('nvic').x+0,EV.diePos('nvic').y,EV.diePos('nvic').z)],0xe56b6f);
-    wg(`<div class="box"><div class="row"><button id="iPress" class="pri">SW5 누르기</button><span id="iCnt" style="font-size:13px"></span></div><div id="iOut" style="font-size:12.5px;color:#9aa6cf">재생하면 한 번의 인터럽트가 단계별로 나타나요.</div></div>`);
+    wg(`<div class="box"><div class="row"><button id="iPress" class="pri">SW5 누르기</button><span id="iCnt" style="font-size:13px"></span></div><div id="iOut" style="font-size:12.5px;color:var(--ink-2)">재생하면 한 번의 인터럽트가 단계별로 나타나요.</div></div>`);
     $('iPress').onclick=fire; showCnt();
   },
   play(){ fire(); }},
@@ -591,7 +624,7 @@ last = now;`)}
     const tr=[0,3,6,11,14,22,25]; // 0.1ms 단위: 상승/하강 전이 (0에서 상승, 이후 교대)
     const draw=(prog=1)=>{ const D=+$('dbw').value; const rises=tr.filter((_,i)=>i%2===0); let last=-999,ok=0; const acc=rises.map(t=>{ if(t-last>=D||last<0){ last=t; ok++; return true; } return false; });
       if(D===0) { ok=rises.length; acc.fill(true); }
-      $('dbv').textContent=(D/10).toFixed(1)+' ms'; $('dbOut').innerHTML=`raw 상승 edge <b>${rises.length}</b>번 → 카운트 <b style="color:${ok===1?'#6effa0':'#ff9b9b'}">${ok}</b>번 ${ok===1?'✔ 한 번 눌림으로 인식':'✘ 채터링으로 오염'}`;
+      $('dbv').textContent=(D/10).toFixed(1)+' ms'; $('dbOut').innerHTML=`raw 상승 edge <b>${rises.length}</b>번 → 카운트 <b style="color:${ok===1?'var(--ok)':'var(--on)'}">${ok}</b>번 ${ok===1?'✔ 한 번 눌림으로 인식':'✘ 채터링으로 오염'}`;
       EV.scope.draw((c,W,H)=>{ c.fillStyle='#e7ebf7'; c.font='bold 40px system-ui,"Noto Sans KR",sans-serif'; c.fillText('PTB26 신호 (채터링)',40,60); const x0=100,x1=W-60,T=30,X=t=>x0+(x1-x0)*t/T;
         const pts=[[0,0]]; tr.forEach((t,i)=>{ pts.push([t,i%2?1:0]); pts.push([t,i%2?0:1]); }); const lastT=tr[tr.length-1]; pts.push([T,1]);
         // pts: build step wave: start low
@@ -608,10 +641,15 @@ last = now;`)}
   enter(){
     const g=new T.Group(); g.userData.mode=true; g.position.set(0,3,-.5);
     const row=(label,items,z)=>{ const total=items.reduce((a,b)=>a+b[1]+.12,0); let x=-total/2; const ls=EV.sprite(label,{size:.6,fs:48}); ls.position.set(-8.4,.5,z); ls.scale.multiplyScalar(1.3); g.add(ls); items.forEach(([t,w,c])=>{ const s=EV.slab({w,h:.4,d:1.1,color:c,title:t,sub:'',fs:46}); s.position.set(x+w/2,0,z); g.add(s); x+=w+.12; return s; }); };
+    const rows=[];
     const P=['push',1.1,0xe5963a],O=['pop',1.1,0x38b06a],A=['ISR A',2.0,0x6c8cff],Bb=['ISR B',2.0,0x9b6cff];
-    row('Tail-chaining (빠름)',[P,A,Bb,O],-1.4); row('매번 복원/재 push',[P,A,O,P,Bb,O],1.2);
+    const mk=(label,items,z)=>{ const out=[]; const total=items.reduce((a,b)=>a+b[1]+.12,0); let x=-total/2; const ls=EV.sprite(label,{size:.6,fs:48}); ls.position.set(-8.4,.5,z); ls.scale.multiplyScalar(1.3); g.add(ls); items.forEach(([t,w,c])=>{ const sl=EV.slab({w,h:.4,d:1.1,color:c,title:t,sub:'',fs:46}); sl.position.set(x+w/2,0,z); g.add(sl); out.push(sl); x+=w+.12; }); return out; };
+    EV.tailRows=[mk('Tail-chaining (빠름)',[P,A,Bb,O],-1.4), mk('매번 복원/재 push',[P,A,O,P,Bb,O],1.2)];
     EV.reg('tail',g,true); EV.show('tail'); EV.labels([]);
-  }}
+  },
+  play(){ const [fast,slow]=EV.tailRows||[]; if(!fast) return; const clear=()=>[...fast,...slow].forEach(x=>x.setGlow(0,null));
+    const seq=[]; fast.forEach((x,i)=>seq.push([i,'f'])); slow.forEach((x,i)=>seq.push([i,'s']));
+    clear(); let k=0; const go=()=>{ if(k>=seq.length){ EV.caption('<b>빠른 줄은 4칸, 아래 줄은 6칸</b> — 같은 일을 하는데 push/pop 2칸 차이',[0,7.4,0]); return; } const [i,w]=seq[k++]; if(w==='f'&&i===0) clear(); if(w==='s'&&i===0){ EV.wait(.6,()=>{ clear(); (slow[0]).setGlow(1,0xe8412c); EV.wait(.5,go); }); return; } (w==='f'?fast:slow)[i].setGlow(1,0xe8412c); EV.wait(.5,go); }; go(); }}
  ]});
 function PN_SW(){ return EV.PN.SW; }
 function showCnt(){ const e=$('iCnt'); if(e) e.innerHTML=`카운트 <b>${irq.count}</b> · LED <b>${irq.led?'ON':'OFF'}</b>`; }
@@ -678,7 +716,7 @@ ${K('for')} (b = 11; b >= 0; b--) {
     wg(`<div class="box"><div class="row"><span>Vin</span><input id="sv" type="range" min="0" max="4095" value="${Math.round(ADC.frac*4095)}"><button id="sGo">변환 시작</button></div><div id="sOut" style="font-size:12.5px;line-height:1.55"></div></div>`);
     const place=()=>{ const code=+$('sv').value; ADC.frac=code/4095; knob(); g.vin.position.set(X(code),.9,-1.4); g.dac.position.set(X(0),.25,-1.4); g.cubes.forEach(c=>{c.material.color.setHex(0x3a4f9a);c.material.emissive.setHex(0);}); $('sOut').innerHTML=`Vin 코드 목표: <b>${code}</b> (${code.toString(2).padStart(12,'0')}b)`; };
     $('sv').oninput=place; place();
-    EV.runSAR=()=>{ const code=+$('sv').value; place(); let res=0,b=11; const log=[]; const stepBit=()=>{ if(b<0){ $('sOut').innerHTML=`<b style="color:#6effa0">완료: ${res}</b> = ${res.toString(2).padStart(12,'0')}b<br>`+log.join(''); return; }
+    EV.runSAR=()=>{ const code=+$('sv').value; place(); let res=0,b=11; const log=[]; const stepBit=()=>{ if(b<0){ $('sOut').innerHTML=`<b style="color:var(--ok)">완료: ${res}</b> = ${res.toString(2).padStart(12,'0')}b<br>`+log.join(''); return; }
         const trial=res|(1<<b), ci=11-b; const from=g.dac.position.x, to=X(trial);
         EV.tween(.28,k=>{ g.dac.position.x=from+(to-from)*k; },()=>{ const keep=trial<=code; if(keep) res=trial; g.cubes[ci].material.color.setHex(keep?0x38e07a:0x7a3a3a); g.cubes[ci].material.emissive.setHex(keep?0x1a6a3a:0x401818);
           log.push(`b${b}: 시험 ${trial} ${keep?'≤':'>'} Vin → <b>${keep?1:0}</b><br>`); $('sOut').innerHTML=log.slice(-3).join(''); b--; EV.wait(.22,stepBit); }); }; stepBit(); };
@@ -693,7 +731,7 @@ ${K('for')} (b = 11; b >= 0; b--) {
     EV.show('die'); EV.dieHL(['adc'],0xb36bff,1); EV.labels(['pot','pADC'],['pot']); EV.markPins(['ADC']); EV.glow('pot',0xd18bff,.4);
     const a=EV.diePos('adc',.4); tpath('adcDie',[V(EV.PN.ADC[0],.3,EV.PN.ADC[1]),V(EV.PN.ADC[0],.3,2.6),V(EV.CHIP.x+2.2,1.2,2.6),a],0xd18bff);
     wg(`<div class="box"><div style="font-size:13px;margin-bottom:6px">PTA11은 어느 ADC의 채널일까요?</div><div class="row"><button id="qa0">ADC0 S10</button><button id="qa1">ADC1 S10</button></div><div id="qaOut" style="font-size:12.5px"></div></div>`);
-    $('qa0').onclick=()=>{ $('qaOut').innerHTML='<b style="color:#ff9b9b">✘</b> ADC0이 아니에요. 핀이 채널을 결정해요.'; }; $('qa1').onclick=()=>{ $('qaOut').innerHTML='<b style="color:#6effa0">✔</b> PTA11 = ADC1_S10'; };
+    $('qa0').onclick=()=>{ $('qaOut').innerHTML='<b style="color:var(--on)">✘</b> ADC0이 아니에요. 핀이 채널을 결정해요.'; }; $('qa1').onclick=()=>{ $('qaOut').innerHTML='<b style="color:var(--ok)">✔</b> PTA11 = ADC1_S10'; };
   },
   play(){ let k=0; const sweep=()=>{ EV.tween(1.6,t=>{ ADC.frac=t; knob(); },()=>{ EV.tween(1.0,t=>{ ADC.frac=1-t*.45; knob(); }); }); }; sweep(); EV.pathFlow('adc',true,.35); EV.pathFlow('adcDie',true,.35); }},
  {t:'하드웨어 평균 8 × 소프트웨어 이동평균 8',cam:{tx:1.5,ty:3,tz:-.5,rad:15,th:.2,ph:.85},
@@ -712,7 +750,7 @@ ${K('return')} sum / count;  ${Cm('// 초기엔 채운 개수로 나눔')}`)}`,
     EV.reg('ring',g,true); EV.show('ring'); EV.labels([]);
     wg(`<div class="box"><div class="row"><span>회전</span><input id="av" type="range" min="0" max="1000" value="${Math.round(ADC.frac*1000)}"><button id="aAdd">측정 +1</button></div><div id="aOut" style="font-size:12.5px;line-height:1.6"></div></div>`);
     const render=()=>{ g.bars.forEach((b,i)=>{ const h=Math.max(.02,ADC.buf[i]/4095*3.4); b.scale.y=h; b.position.y=h/2; b.material.color.setHex(i===(ADC.idx+7)%8&&ADC.count?0xffd166:0x3a6fd1); }); g.ptr.position.set(-3.5+ADC.idx*1.0,3.7,0);
-      g.out.retitle('filtered',String(ADC.filt)); $('aOut').innerHTML=`hw_avg <b>${ADC.hw}</b> · sum <b>${ADC.sum}</b> · count <b>${ADC.count}</b><br>filtered = ${ADC.sum} / ${ADC.count || 1} = <b style="color:#6effa0">${ADC.filt}</b> · mV(5000) = <b>${Math.round(ADC.filt*5000/4095)}</b>`; };
+      g.out.retitle('filtered',String(ADC.filt)); $('aOut').innerHTML=`hw_avg <b>${ADC.hw}</b> · sum <b>${ADC.sum}</b> · count <b>${ADC.count}</b><br>filtered = ${ADC.sum} / ${ADC.count || 1} = <b style="color:var(--ok)">${ADC.filt}</b> · mV(5000) = <b>${Math.round(ADC.filt*5000/4095)}</b>`; };
     g.render=render;
     EV.addSample=()=>{ ADC.frac=+$('av').value/1000; knob(); const base=ADC.frac*4095; const hw=clamp(Math.round(base+(Math.random()-.5)*90),0,4095); ADC.hw=hw;
       ADC.sum-=ADC.buf[ADC.idx]; ADC.buf[ADC.idx]=hw; ADC.sum+=hw; ADC.idx=(ADC.idx+1)%8; ADC.count=Math.min(8,ADC.count+1); ADC.filt=Math.round(ADC.sum/ADC.count);
@@ -730,7 +768,7 @@ ${K('return')} sum / count;  ${Cm('// 초기엔 채운 개수로 나눔')}`)}`,
     let bits=14; const upd=()=>{ ADC.frac=+$('tv').value/1000; knob(); const full=(1<<bits)-1; const filt=Math.round(ADC.frac*full); const mv=Math.round(filt*5000/4095), real=Math.round(ADC.frac*5000);
       $('t12').classList.toggle('on',bits===12); $('t14').classList.toggle('on',bits===14);
       EV.lcd.set('HW:'+String(filt).padStart(4,' ')+' MA:'+String(filt).padStart(4,' '),(mv/1000).toFixed(3)+' V',null);
-      $('tOut').innerHTML=`코드 범위 0~${full} · filtered <b>${filt}</b><br>표시 <b style="color:${bits===12?'#6effa0':'#ff9b9b'}">${mv} mV</b> vs 실제 ≈ ${real} mV ${bits===12?'✔':'✘ (약 4배)'}`; };
+      $('tOut').innerHTML=`코드 범위 0~${full} · filtered <b>${filt}</b><br>표시 <b style="color:${bits===12?'var(--ok)':'var(--on)'}">${mv} mV</b> vs 실제 ≈ ${real} mV ${bits===12?'✔':'✘ (약 4배)'}`; };
     $('tv').oninput=upd; $('t12').onclick=()=>{bits=12;upd();}; $('t14').onclick=()=>{bits=14;upd();}; upd();
   }}
  ]});

@@ -45,7 +45,7 @@ function buildComposer(w,h){
     const rt = new T.WebGLMultisampleRenderTarget(w*R.getPixelRatio(),h*R.getPixelRatio(),{format:T.RGBAFormat,type:T.HalfFloatType}); rt.samples = EV.msaa==null?4:EV.msaa;
     composer = new FX.EffectComposer(R,rt); composer.setPixelRatio(R.getPixelRatio()); composer.setSize(w,h);
     composer.addPass(new FX.RenderPass(scene,cam));
-    bloom = new FX.UnrealBloomPass(new T.Vector2(Math.round(w/2),Math.round(h/2)),.36,.5,1.25); composer.addPass(bloom);
+    bloom = new FX.UnrealBloomPass(new T.Vector2(Math.round(w/2),Math.round(h/2)),.2,.45,1.3); composer.addPass(bloom);
     composer.addPass(new FX.ShaderPass(FinalShader));
   }catch(err){ console.warn('composer 사용 불가, 기본 렌더로 대체',err); composer=null; R.outputEncoding=T.sRGBEncoding; R.toneMapping=T.ACESFilmicToneMapping; R.toneMappingExposure=1; }
 }
@@ -171,7 +171,7 @@ stage.addEventListener('focusout',e=>{ if(!stage.contains(e.relatedTarget)) stag
 /* ---------- 피킹 / 호버 ---------- */
 const ray=new T.Raycaster(), mp=new T.Vector2();
 function partAt(e){ const r=rectOf(); mp.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1); ray.setFromCamera(mp,cam);
-  const hits=ray.intersectObjects(Object.values(EV.parts),true);
+  const dieB=EV.die&&EV.die.visible?Object.values(EV.die.blocks):[]; const hits=ray.intersectObjects([...Object.values(EV.parts),...dieB],true);
   for(const h of hits){ let o=h.object; while(o&&!o.userData.part) o=o.parent; if(o) return o.userData.part; } return null; }
 function hover(e){ EV.pendingHover=e; EV.hold=Math.max(EV.hold||0,.3); }
 let lastHover=0;
@@ -301,7 +301,7 @@ EV.onFrame=fn=>EV.frameFns.push(fn);
 function update(dt){
   const rdt=dt; dt=dt*(EV.speed||1);
   EV.time+=dt; EV.dt=dt;
-  for(let i=EV.tweens.length-1;i>=0;i--){ const t=EV.tweens[i]; if(!t) continue; t.t+=dt; const p=Math.min(1,t.t/t.dur); if(t.fn) t.fn(t.ease(p)); if(p>=1){ const k=EV.tweens.indexOf(t); if(k>=0) EV.tweens.splice(k,1); t.done&&t.done(); } }
+  for(let i=EV.tweens.length-1;i>=0;i--){ const t=EV.tweens[i]; if(!t) continue; t.t+=dt; const p=Math.min(1,t.t/t.dur); try{ if(t.fn) t.fn(t.ease(p)); }catch(e){ (window.B3D_ERR||console.error)(e,'애니메이션'); t.t=t.dur; } if(p>=1||t.t>=t.dur){ const k=EV.tweens.indexOf(t); if(k>=0) EV.tweens.splice(k,1); try{ t.done&&t.done(); }catch(e){ (window.B3D_ERR||console.error)(e,'애니메이션'); } } }
   for(const [id,g] of Object.entries(EV.glows)) setEm(id,g.amp*(.7+.3*Math.sin(EV.time*3)),g.color);
   for(const p of Object.values(EV.paths)) if(p.flowing){ p.off=(p.off+dt*p.speed)%1; p.trail.forEach((s,i)=>{ const k=((p.off+i/p.trail.length)%1); p.cp.getPointAt(k,s.position); s.scale.setScalar(.6+.6*Math.sin(k*Math.PI)); }); }
   EV.frameFns.forEach(f=>f(dt,EV.time));
@@ -310,8 +310,13 @@ function update(dt){
 EV.advance=(sec)=>{ for(let t=0;t<sec;t+=.05) update(.05); };
 let last=performance.now(), running=true; EV.hold=1;
 const camDelta=()=>{ const c=C.cur,g=C.goal; return Math.abs(g.tx-c.tx)+Math.abs(g.ty-c.ty)+Math.abs(g.tz-c.tz)+Math.abs(g.rad-c.rad)*.5+(Math.abs(g.th-c.th)+Math.abs(g.ph-c.ph))*10; };
+let frameErr=0;
 function frame(now){
-  const dt=Math.min(.05,(now-last)/1000); last=now;
+  const dt=Math.min(.05,(now-last)/1000||0); last=now;
+  if(running&&frameErr<30){ try{ frameBody(dt); frameErr=Math.max(0,frameErr-.02); }catch(e){ frameErr++; (window.B3D_ERR||console.error)(e,'렌더'); if(frameErr>=30){ const f=document.getElementById('fail'); if(f){ f.hidden=false; f.querySelector('p').textContent='3D 렌더링에서 계속 오류가 나서 멈췄어요. 새로고침하거나 주차별 페이지에서 같은 내용을 볼 수 있어요.'; } } } }
+  requestAnimationFrame(frame);
+}
+function frameBody(dt){
   if(running){
     EV._moving=false; doHover(); update(dt);
     EV.idle+=dt;
@@ -331,11 +336,12 @@ function frame(now){
       adapt(dt);
     } else aSkip=6;
   }
-  requestAnimationFrame(frame);
 }
 // 화면 밖(스크롤 아웃)이면 렌더 중단 → 배터리/GPU 절약
 new IntersectionObserver(es=>{ running=es[0].isIntersecting; },{threshold:0}).observe(stage);
-new ResizeObserver(resize).observe(stage);
+new ResizeObserver(()=>{ try{ resize(); }catch(e){ (window.B3D_ERR||console.error)(e,'크기 조정'); } }).observe(stage);
+canvas.addEventListener('webglcontextlost',(e)=>{ e.preventDefault(); running=false; const el=document.getElementById('err'); if(el) el.textContent='3D 연결이 잠시 끊겼어요. 복구하는 중…'; });
+canvas.addEventListener('webglcontextrestored',()=>{ running=true; last=performance.now(); EV.hold=1; EV.shadowDirty=true; try{ resize(); }catch(_){} const el=document.getElementById('err'); if(el) el.textContent=''; });
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',readTheme);
 ['pointerdown','input','change','click','keydown'].forEach(t=>$('panel').addEventListener(t,()=>{ EV.hold=Math.max(EV.hold||0,1); EV.shadowDirty=true; }));
 EV.start=()=>{ readTheme(); resize(); EV.ready=true; Object.assign(C.cur,HOME); Object.assign(C.goal,HOME); requestAnimationFrame(frame); };
@@ -357,23 +363,25 @@ EV.resetScene=()=>{
   EV.cleanup&&EV.cleanup.forEach(f=>f()); EV.cleanup=[]; $('wg').innerHTML=''; EV.billboards=[];
 };
 EV.labels=(ids,hot=[])=>{ EV.curLabels=ids; EV.curHot=hot; EV.showLabels(ids,hot); };
-EV.setMode=(i)=>{ EV.hold=1; EV.shadowDirty=true;
+EV.setMode=(i)=>{ if(!EV.modes[i]) i=0; EV.hold=1; EV.shadowDirty=true;
   EV.autoRotate=false; EV.mode=i; EV.step=-1; const m=EV.modes[i]; renderTabs();
   $('kicker').textContent=m.kicker||''; $('mtitle').textContent=m.title;
   const pills=$('pills'); pills.innerHTML='';
   (m.steps||[]).forEach((s,j)=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent=j+1; b.title=(j+1)+'. '+s.t; b.onclick=()=>EV.setStep(j); pills.appendChild(b); });
   const has=m.steps&&m.steps.length; $('ctl').style.display=has?'flex':'none'; $('speed').hidden=!has; $('progress').style.display=has?'block':'none';
-  if(has) EV.setStep(0); else { EV.resetScene(); m.enter&&m.enter(); }
+  if(has) EV.setStep(0); else { EV.resetScene(); try{ m.enter&&m.enter(); }catch(e){ (window.B3D_ERR||console.error)(e,m.tab); } }
   updateModeLink(m); try{ history.replaceState(null,'','#'+m.id); }catch(_){}
   if(!has){ EV.setStatus('부품을 <b>클릭</b>하면 확대되고 설명이 나와요. 마우스를 올리면 이름이 떠요.'); store.set('b3d-last',{id:m.id,step:0}); }
 };
 EV.setStep=(j)=>{ EV.hold=1; EV.shadowDirty=true;
-  const m=EV.modes[EV.mode]; j=Math.max(0,Math.min(m.steps.length-1,j)); EV.step=j; const s=m.steps[j]; EV.resetScene();
+  const m=EV.modes[EV.mode]; if(!m||!m.steps||!m.steps.length) return; j=Number.isFinite(+j)?Math.max(0,Math.min(m.steps.length-1,Math.trunc(+j))):0; EV.step=j; const s=m.steps[j]; EV.resetScene();
   [...$('pills').children].forEach((b,k)=>{ b.className='chip'+(k===j?' on':(k<j?' done':'')); });
   $('stepmeta').innerHTML=`step <b>${j+1}/${m.steps.length}</b> · ${s.t}`;
   $('sbody').innerHTML=`<h3>${j+1}. ${s.t}</h3>`+s.html; $('sbody').scrollTop=0;
-  if(s.cam) EV.flyTo(s.cam);
-  m.enter&&m.enter(); s.enter&&s.enter(); if(s.play) EV.wait(.8,()=>s.play());
+  try{ if(s.cam) EV.flyTo(s.cam); }catch(e){ (window.B3D_ERR||console.error)(e,'카메라'); }
+  try{ m.enter&&m.enter(); }catch(e){ (window.B3D_ERR||console.error)(e,m.tab); }
+  try{ s.enter&&s.enter(); }catch(e){ (window.B3D_ERR||console.error)(e,(j+1)+'단계'); $('sbody').insertAdjacentHTML('beforeend','<div class="warn">이 단계의 3D 장면을 만들다 문제가 생겼어요. 설명은 그대로 볼 수 있고, 다른 단계로 이동해도 돼요.</div>'); }
+  if(s.play) EV.wait(.8,()=>{ try{ s.play(); }catch(e){ (window.B3D_ERR||console.error)(e,'재생'); } });
   { const hasWg=$('wg').children.length>0; EV.setStatus(hasWg?'오른쪽 <b>직접 해보기</b>를 만지면 3D에서 바로 바뀌어요.':(s.play?'재생이 끝나면 <b>↻ 다시 재생</b>(Space)으로 반복해서 볼 수 있어요.':'3D를 돌려 보며 오른쪽 설명을 따라가 보세요.')); store.set('b3d-last',{id:m.id,step:j}); EV.markSeen(m.id,j); setTimeout(updateMore,30); linkify(sbEl); try{ history.replaceState(null,'','#'+m.id+'/'+(j+1)); }catch(_){} }
   $('prev').disabled=j===0; { const t=nextTarget(); $('next').disabled=false; $('next').textContent=!t?'다음 →':(t.page?'예상문제 풀기 →':EV.modes[t.mode].tab+' →'); } if(!s.play) $('play').textContent='▶ 재생'; else $('play').textContent='▶ 재생 중…'; if(s.play) EV.wait(7,()=>{ $('play').textContent='↻ 다시 재생'; });
 };
@@ -407,7 +415,7 @@ const PRE=()=>({all:EV.home,top:{tx:EV.CHIP.x-2,ty:0,tz:-1,rad:36,th:0,ph:.14},c
 document.querySelectorAll('[data-cam]').forEach(b=>b.onclick=()=>EV.flyTo(PRE()[b.dataset.cam]));
 const box=$('b3d'), page=document.querySelector('.page');
 const fsOn=()=>document.fullscreenElement===box;
-function toggleFS(){ if(fsOn()) document.exitFullscreen(); else (box.requestFullscreen||box.webkitRequestFullscreen||(()=>{})).call(box); }
+function toggleFS(){ try{ const r=fsOn()?document.exitFullscreen():(box.requestFullscreen||box.webkitRequestFullscreen||(()=>Promise.reject(new Error('이 브라우저는 전체화면을 지원하지 않아요')))).call(box); if(r&&r.catch) r.catch(e=>(window.B3D_ERR||console.error)(e,'전체화면')); }catch(e){ (window.B3D_ERR||console.error)(e,'전체화면'); } }
 document.addEventListener('fullscreenchange',()=>{ $('fsBtn').textContent=fsOn()?'전체화면 닫기':'전체화면'; stage.focus({preventScroll:true}); });
 $('fsBtn').onclick=toggleFS;
 const setWide=(on)=>{ page.classList.toggle('full',on); document.querySelector('.topbar').classList.toggle('full',on); $('wideBtn').textContent=on?'좁게':'넓게'; saveUI(); };
@@ -423,7 +431,7 @@ EV.hideCoach=()=>{ if(coach.hidden) return; coach.hidden=true; helpBtn.setAttrib
 const showCoach=()=>{ coach.hidden=false; helpBtn.setAttribute('aria-expanded','true'); };
 helpBtn.onclick=()=>coach.hidden?showCoach():EV.hideCoach(); $('coachOk').onclick=EV.hideCoach;
 if(ui.panel===false) togglePanel(); if(ui.labels===false){ $('optLabels').checked=false; } if(ui.wide) setWide(true);
-if(!store.get('b3d-coach')) showCoach();
+if(!store.get('b3d-coach')){ showCoach(); canvas.addEventListener('pointerdown',()=>EV.hideCoach(),{once:true}); setTimeout(()=>EV.hideCoach(),9000); }
 stage.addEventListener('keydown',e=>{ if(e.target.tagName==='INPUT') return;
   if(e.key==='ArrowRight'){ e.preventDefault(); EV.setStep(EV.step+1); } else if(e.key==='ArrowLeft'){ e.preventDefault(); EV.setStep(EV.step-1); }
   else if(e.key==='h'||e.key==='H') togglePanel(); else if(e.key==='?') (coach.hidden?showCoach():EV.hideCoach()); else if(e.key==='f'||e.key==='F') toggleFS(); else if(e.key==='Escape'){ if(!coach.hidden) EV.hideCoach(); else EV.flyTo(EV.home); } else if(e.key===' '){ e.preventDefault(); $('play').click(); }

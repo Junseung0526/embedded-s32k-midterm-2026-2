@@ -1,13 +1,14 @@
 (function(){
 const EV=window.B3D, q=new URLSearchParams(location.search);
-EV.renderTabs();
+const safe=(f,w)=>{ try{ return f(); }catch(e){ (window.B3D_ERR||console.error)(e,w); } };
+safe(()=>EV.renderTabs(),'탭');
 EV.start();
 const hm=location.hash.slice(1).split('/'); const hid=hm[0], hstep=parseInt(hm[1]);
 let idx=EV.modes.findIndex(m=>m.id===(q.get('m')||hid)); if(idx<0) idx=0;
-EV.setMode(idx);
+safe(()=>EV.setMode(idx),'시작');
 let s=parseInt(q.get('s')); if(isNaN(s)&&!isNaN(hstep)) s=hstep-1;
-if(!isNaN(s)&&EV.modes[idx].steps) EV.setStep(s);
-addEventListener('hashchange',()=>{ const p=location.hash.slice(1).split('/'); const i=EV.modes.findIndex(m=>m.id===p[0]); if(i<0) return; if(i!==EV.mode) EV.setMode(i); const st=parseInt(p[1]); if(!isNaN(st)&&EV.modes[i].steps&&st-1!==EV.step) EV.setStep(st-1); });
+if(!isNaN(s)&&EV.modes[idx].steps) safe(()=>EV.setStep(s),'단계');
+addEventListener('hashchange',()=>{ const p=location.hash.slice(1).split('/'); const i=EV.modes.findIndex(m=>m.id===p[0]); if(i<0) return; safe(()=>{ if(i!==EV.mode) EV.setMode(i); const st=parseInt(p[1]); if(!isNaN(st)&&EV.modes[i].steps&&st-1!==EV.step) EV.setStep(st-1); },'주소 이동'); });
 if(q.get('pick')) EV.onPick(q.get('pick'));
 if(q.get('adv')) EV.advance(parseFloat(q.get('adv')));
 if(q.get('still')){ Object.assign(EV.camState.cur,EV.camState.goal); }

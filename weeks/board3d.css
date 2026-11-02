@@ -2,9 +2,9 @@
    색 의미: 빨강 = ON·LED·신호, 청록 = SDA·데이터, 호박 = SCL·클럭 */
 .page.wide { max-width: 1320px; }
 body .topbar { max-width: 1320px; }
-.page.wide .hero { padding: 28px 0 18px; margin-bottom: 20px; }
+.page.wide .hero { padding: 18px 0 8px; margin-bottom: 12px; }
 .page.wide h1 { font-size: clamp(26px, 3.6vw, 38px); margin: 6px 0 10px; }
-.page.wide .lede { font-size: 16.5px; max-width: 90ch; margin: 0; }
+.page.wide .lede { font-size: 15.5px; max-width: 70ch; margin: 0; color: var(--ink-2); }
 .page.wide .easy-top { margin-top: 12px; }
 .page.full, body .topbar.full { max-width: none; padding-left: 20px; padding-right: 20px; }
 kbd { font: 12px var(--mono); background: var(--panel-2); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; margin: 0 1px; white-space: nowrap; }
@@ -71,7 +71,7 @@ kbd { font: 12px var(--mono); background: var(--panel-2); border: 1px solid var(
 .coach ul { list-style: none; margin: 6px 0 10px; padding: 0; display: grid; gap: 3px; font-size: 13.5px; line-height: 1.45; }
 .coach .t { color: var(--ink-2); font-size: 13px; }
 .coach .key { min-height: 32px; padding: 3px 14px; }
-.stage-load { position: absolute; inset: 0; display: grid; place-items: center; background: var(--bg); font: 14px var(--mono); color: var(--ink-2); transition: opacity .5s; z-index: 7; }
+.stage-load { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 14px; background: var(--bg); font: 14px var(--mono); color: var(--ink-2); transition: opacity .5s; z-index: 7; }
 .stage-load.done { opacity: 0; pointer-events: none; }
 .stage-fail { position: absolute; inset: 0; z-index: 8; display: grid; align-content: center; justify-items: center; gap: 6px; padding: 24px; text-align: center; background: var(--bg); }
 .stage-fail[hidden] { display: none; }
@@ -167,3 +167,29 @@ kbd { font: 12px var(--mono); background: var(--panel-2); border: 1px solid var(
 .b3d-modes .key[aria-pressed="true"] .pg { color: inherit; opacity: .75; }
 .b3d-modes .pg.done { color: var(--ok); opacity: 1; }
 .b3d-modes .key[aria-pressed="true"] .pg.done { color: #8fd9a8; }
+
+/* 부품 클릭 설명 카드 */
+.pcard { position: absolute; right: 12px; top: 12px; z-index: 5; width: min(300px, calc(100% - 24px)); background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--ink-2); border-radius: var(--r); padding: 12px 34px 12px 14px; box-shadow: 0 10px 30px rgba(0, 0, 0, .25); font-size: 13.5px; line-height: 1.55; }
+.pcard[hidden] { display: none; }
+.pcard b { display: block; font-size: 14.5px; }
+.pcard small { display: block; font: 11.5px var(--mono); color: var(--ink-2); margin-bottom: 6px; }
+.pcard p { margin: 0; }
+.pcard .x { position: absolute; right: 6px; top: 4px; border: 0; background: none; color: var(--ink-2); font-size: 20px; line-height: 1; cursor: pointer; padding: 4px 8px; }
+
+.goW { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.ld-bar { width: 140px; height: 3px; border-radius: 2px; background: var(--line); position: relative; overflow: hidden; }
+.ld-bar::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 40%; background: var(--ink-2); animation: ld 1.1s ease-in-out infinite; }
+@keyframes ld { from { transform: translateX(-100%); } to { transform: translateX(350%); } }
+.pcard { animation: up .18s ease-out; }
+.pcard .x:focus-visible { outline: 2px solid var(--on); border-radius: 4px; }
+.lbl, #tip, .pcard { font-family: var(--mono); }
+@media (max-width: 700px) {
+  .pcard { right: 8px; left: 8px; top: auto; bottom: 8px; width: auto; max-height: 45%; overflow: auto; }
+}
+@media (prefers-reduced-motion: reduce) { .ld-bar::after, .pcard { animation: none; } }
+
+/* 단계 흐름: 질문 → 관찰 → 핵심 한 줄 */
+.ask, .keyline { margin: .8em 0; padding: 10px 14px; border-radius: var(--r); font-size: 14.5px; line-height: 1.65; }
+.ask { background: var(--panel-2); border-left: 3px solid var(--ink-2); }
+.keyline { background: var(--on-soft); border-left: 3px solid var(--on); }
+.ask small, .keyline small { display: block; font: 11.5px var(--mono); color: var(--ink-2); margin-bottom: 2px; }

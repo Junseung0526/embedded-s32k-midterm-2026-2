@@ -5,6 +5,20 @@ import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
 
+// 어떤 오류도 페이지 전체를 멈추지 않게: 화면 구석(#err)에 짧게 알리고 콘솔에는 전체를 남긴다
+let errAt=0, errN=0;
+window.B3D_ERR = (e, where) => {
+  console.error("[board3d]" + (where ? " " + where : ""), e);
+  const el = document.getElementById("err"); if (!el) return;
+  const now = Date.now(); if (now - errAt < 1500 && errN > 2) return; errAt = now; errN++;
+  const msg = (e && e.message) ? e.message : String(e);
+  el.textContent = "일부 동작에 문제가 생겼어요" + (where ? " (" + where + ")" : "") + ": " + msg.slice(0, 120);
+  clearTimeout(window.__errT); window.__errT = setTimeout(() => { el.textContent = ""; errN = 0; }, 8000);
+};
+window.addEventListener("error", (ev) => { if (ev.target && ev.target !== window) return; window.B3D_ERR(ev.error || ev.message, "스크립트"); });
+window.addEventListener("unhandledrejection", (ev) => { window.B3D_ERR(ev.reason, "비동기"); });
+window.B3D_SAFE = (fn, where) => { try { return fn(); } catch (e) { window.B3D_ERR(e, where); } };
+
 window.THREE = THREE;
 window.B3D_FX = { EffectComposer, RenderPass, UnrealBloomPass, ShaderPass };
 
